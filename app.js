@@ -94,6 +94,8 @@ const SEED_POSTS = [
         details: "I have extra groceries from a bulk trip: canned beans, rice, pasta, cereal, and a few snacks. Pickup window: Today 4:30–6:30 PM. Please text when you're on the way and wait near the front steps; I'll bring items out. Bring your own bags if you can.",
         contact: "Text (619) 555-0138",
         tags: ["pantry", "grab-bags", "kid-friendly"],
+        lat: 32.7455,
+        lng: -117.1312,
         createdAt: Date.now() - 3600000
     },
     {
@@ -106,6 +108,8 @@ const SEED_POSTS = [
         details: "We're distributing produce boxes (mixed fruits/veg) plus bread while supplies last. Pickup: Wed 10:00 AM–12:00 PM. Enter from the side gate on Orange Ave and follow the cones. One box per household. No ID required.",
         contact: "Email pantry@stbridgetsd.org",
         tags: ["produce", "bread", "no-id"],
+        lat: 32.7394,
+        lng: -117.0931,
         createdAt: Date.now() - 7200000
     },
     {
@@ -118,6 +122,8 @@ const SEED_POSTS = [
         details: "Drive-thru distribution with pantry items and produce. Pickup: Thu 9:00–11:00 AM. Stay in your vehicle and follow volunteers' directions. Arrive early if possible. Limit one allocation per vehicle/household.",
         contact: "Call (858) 555-0199",
         tags: ["drive-thru", "produce", "pantry"],
+        lat: 32.7707,
+        lng: -117.1781,
         createdAt: Date.now() - 10800000
     },
     {
@@ -130,6 +136,8 @@ const SEED_POSTS = [
         details: "Meal kits include rice, beans, tortillas, and a protein option (while supplies last). Pickup: Fri 2:00–4:00 PM. Walk-up only. Please form a single line along the mural wall and keep aisles clear.",
         contact: "Text (619) 555-0144",
         tags: ["meal-kits", "walk-up", "pantry"],
+        lat: 32.7058,
+        lng: -117.1178,
         createdAt: Date.now() - 14400000
     },
     {
@@ -142,6 +150,8 @@ const SEED_POSTS = [
         details: "I have leftover catered trays: sandwiches + salad portions (refrigerated). Pickup: Today 6:00–7:00 PM only. Please text ETA; I'll be by the park entrance with coolers. Bring containers if you have them.",
         contact: "Text (858) 555-0122",
         tags: ["prepared-food", "first-come", "bring-containers"],
+        lat: 32.8107,
+        lng: -117.2045,
         createdAt: Date.now() - 21600000
     },
     {
@@ -154,6 +164,8 @@ const SEED_POSTS = [
         details: "Fridge restock includes milk, eggs, veggies, and a pantry shelf with canned goods. Available now through 8:00 PM. Please take what you need and leave some for others. Keep fridge door closed between grabs.",
         contact: "Email barriologanfridge@proton.me",
         tags: ["community-fridge", "dairy", "produce"],
+        lat: 32.6983,
+        lng: -117.1306,
         createdAt: Date.now() - 28800000
     },
     {
@@ -166,6 +178,8 @@ const SEED_POSTS = [
         details: "Pantry bags (shelf-stable foods) plus limited hygiene items (soap, shampoo, wipes). Pickup: Sat 9:30–11:30 AM. Enter via rear parking lot, follow signs to Fellowship Hall. One bag per person; families can request extra if available.",
         contact: "Call (619) 555-0171",
         tags: ["pantry", "hygiene", "weekend"],
+        lat: 32.7280,
+        lng: -117.1250,
         createdAt: Date.now() - 32400000
     },
     {
@@ -178,6 +192,8 @@ const SEED_POSTS = [
         details: "Fresh produce (seasonal) + pantry staples. Pickup: Tue 1:00–3:00 PM. Walk-up line starts at the blue tent. Please bring a cart or sturdy bags. If you can't stand long, ask a volunteer for priority assistance.",
         contact: "Email sydistro@feedingsd.example",
         tags: ["produce", "pantry", "walk-up"],
+        lat: 32.5586,
+        lng: -117.0450,
         createdAt: Date.now() - 43200000
     },
     {
@@ -190,6 +206,8 @@ const SEED_POSTS = [
         details: "We'll have hot meals (while supplies last) plus water bottles. Pickup: Sun 12:00–1:30 PM. Please line up along the sidewalk, and let us know about dietary restrictions (vegetarian options limited).",
         contact: "Text (619) 555-0160",
         tags: ["hot-meals", "water", "limited-veg"],
+        lat: 32.7080,
+        lng: -117.0530,
         createdAt: Date.now() - 54000000
     },
     {
@@ -202,6 +220,8 @@ const SEED_POSTS = [
         details: "Little pantry box restocked with canned soups, oatmeal, pasta, and snacks. Available anytime; please be respectful of neighbors and keep noise down after 8 PM. If the box is empty, check back later this week.",
         contact: "Email miramesapantrybox@gmail.com",
         tags: ["pantry", "24-7", "snacks"],
+        lat: 32.9153,
+        lng: -117.1439,
         createdAt: Date.now() - 64800000
     },
     {
@@ -214,6 +234,8 @@ const SEED_POSTS = [
         details: "Produce bags for families plus limited diapers (sizes 3–5). Pickup: Mon 10:00 AM–12:00 PM. Pull into side lot and park; a volunteer will confirm diaper size if available. Please bring ID only if picking up diapers; produce is open to all.",
         contact: "Call (619) 555-0116",
         tags: ["produce", "diapers", "family"],
+        lat: 32.7678,
+        lng: -117.0231,
         createdAt: Date.now() - 86400000
     },
     {
@@ -226,6 +248,8 @@ const SEED_POSTS = [
         details: "Serving soup and bread. Pickup: Wed 5:00–6:30 PM. Walk up to the service window and let us know how many portions you need. Please bring your own container if possible; we have limited disposable bowls.",
         contact: "Email cvcommunitykitchen@proton.me",
         tags: ["hot-meals", "bread", "bring-container"],
+        lat: 32.6401,
+        lng: -117.0842,
         createdAt: Date.now() - 129600000
     }
 ];
@@ -235,7 +259,6 @@ let posts = [];
 let map;
 let markers = [];
 let geocoder;
-let expandedPostId = null;
 
 // ===== GOOGLE MAPS INITIALIZATION =====
 function initMap() {
@@ -283,12 +306,27 @@ window.initMap = initMap;
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
-    // Map initialization handled by callback
-    // But we can show a loading message
+    // Always load posts and attach listeners even if map fails
+    loadPosts();
+    renderFeed();
+    attachEventListeners();
+
+    // Show loading message
     const mapContainer = document.getElementById('map');
     if (mapContainer && !map) {
         mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--color-text-muted);">Loading map...</div>';
     }
+
+    // Fallback: if Google Maps doesn't load in 3 seconds, continue anyway
+    setTimeout(() => {
+        if (!map) {
+            console.warn('Google Maps did not load - continuing without map');
+            const mapContainer = document.getElementById('map');
+            if (mapContainer) {
+                mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--color-text-muted); background: var(--color-bg-light); padding: 20px; text-align: center;">⚠️ Map failed to load (ad blocker or API key issue)<br><br>Posts will still work without the map!</div>';
+            }
+        }
+    }, 3000);
 });
 
 function loadPosts() {
@@ -430,33 +468,30 @@ function createPostCard(post) {
     const timeLabel = getTimeLabel(post.createdAt);
     const orgClass = getOrgClass(post.orgType);
     const primaryTag = post.tags.length > 0 ? post.tags[0] : null;
-    const isExpanded = expandedPostId === post.id;
 
     return `
-        <article class="post-card ${isExpanded ? 'expanded' : ''}" data-post-id="${post.id}">
-            <div class="post-clickable" data-post-id="${post.id}">
-                <div class="post-header">
-                    <div class="post-author">
-                        <span class="author-name">${escapeHtml(post.author)}</span>
-                        <span class="org-badge ${orgClass}">${escapeHtml(post.orgType)}</span>
-                    </div>
-                    <span class="time-label">${timeLabel}</span>
+        <article class="post-card" data-post-id="${post.id}">
+            <div class="post-header">
+                <div class="post-author">
+                    <span class="author-name">${escapeHtml(post.author)}</span>
+                    <span class="org-badge ${orgClass}">${escapeHtml(post.orgType)}</span>
                 </div>
-                
-                <!-- Enhanced Preview: Type of Assistance + Neighborhood -->
-                <div class="post-preview">
-                    ${primaryTag ? `<span class="primary-tag">🏷️ ${escapeHtml(primaryTag)}</span>` : ''}
-                    ${post.neighborhood ? `<span class="primary-neighborhood">📍 ${escapeHtml(post.neighborhood)}</span>` : ''}
-                </div>
-                
-                <h3 class="post-title">${escapeHtml(post.title)}</h3>
-                <p class="post-details">${escapeHtml(post.details)}</p>
-                
-                ${post.imageUrl ? `<img src="${escapeHtml(post.imageUrl)}" alt="${escapeHtml(post.title)}" class="post-image" loading="lazy">` : ''}
+                <span class="time-label">${timeLabel}</span>
             </div>
             
-            <!-- Expanded Details -->
-            ${isExpanded ? `
+            <!-- Enhanced Preview: Type of Assistance + Neighborhood -->
+            <div class="post-preview">
+                ${primaryTag ? `<span class="primary-tag">🏷️ ${escapeHtml(primaryTag)}</span>` : ''}
+                ${post.neighborhood ? `<span class="primary-neighborhood">📍 ${escapeHtml(post.neighborhood)}</span>` : ''}
+            </div>
+            
+            <h3 class="post-title">${escapeHtml(post.title)}</h3>
+            <p class="post-details">${escapeHtml(post.details)}</p>
+            
+            ${post.imageUrl ? `<img src="${escapeHtml(post.imageUrl)}" alt="${escapeHtml(post.title)}" class="post-image" loading="lazy">` : ''}
+            
+            <!-- Always Show Full Details -->
+            
                 <div class="expanded-details">
                     <div class="detail-row">
                         <span class="detail-label">📍 Pickup Address:</span>
@@ -491,7 +526,7 @@ function createPostCard(post) {
                         </button>
                     </div>
                 </div>
-            ` : ''}
+
         </article>
     `;
 }
