@@ -633,23 +633,7 @@ function handleFeedClick(e) {
     }
 }
 
-function togglePostExpansion(postId) {
-    if (expandedPostId === postId) {
-        // Collapse
-        expandedPostId = null;
-    } else {
-        // Expand and pan map
-        expandedPostId = postId;
 
-        // Find post and pan to location
-        const post = posts.find(p => p.id === postId);
-        if (post && post.lat && post.lng) {
-            panMapToLocation(post.lat, post.lng);
-        }
-    }
-
-    renderFeed();
-}
 
 async function copyToClipboard(text) {
     try {
