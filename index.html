@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Resource Network - San Diego Community</title>
+    <meta name="description"
+        content="Share food donations and pickup info across San Diego. Connect with local churches, nonprofits, and community members.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-top">
+                    <h1 class="header-title">🍊 Food Resource Network</h1>
+                    <span class="demo-badge">Demo only — mock data</span>
+                </div>
+                <p class="header-tagline">Share food donations and pickup info across San Diego.</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Column: Community Feed -->
+            <section class="feed-section">
+                <div class="feed-header">
+                    <h2 class="feed-title">
+                        <span class="feed-icon">💬</span>
+                        Community Feed
+                    </h2>
+                </div>
+
+                <!-- Google Map -->
+                <div id="map" class="map-container"></div>
+                <div id="feedContainer" class="feed-container" role="feed"></div>
+            </section>
+
+            <!-- Right Column: Create Post Form -->
+            <aside class="form-section" id="formSection">
+                <button class="mobile-toggle-btn" id="mobileToggleBtn" aria-label="Toggle post form">
+                    ➕ Create Post
+                </button>
+                <div class="form-wrapper" id="formWrapper">
+                    <div class="form-header">
+                        <h2 class="form-title">
+                            <span class="form-icon">✏️</span>
+                            Create New Post
+                        </h2>
+                        <button class="close-btn" id="closeBtnMobile" aria-label="Close form">✕</button>
+                    </div>
+                    <form id="createPostForm" class="create-post-form" novalidate>
+                        <div class="form-group">
+                            <label for="authorName">Author Name</label>
+                            <input type="text" id="authorName" value="Community Helper" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="orgType">Organization Type</label>
+                            <select id="orgType" required>
+                                <option value="Community Member">Community Member</option>
+                                <option value="Church">Church</option>
+                                <option value="Nonprofit">Nonprofit</option>
+                                <option value="Feeding San Diego Access Point">Feeding San Diego Access Point</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="postTitle">Title <span class="required">*</span></label>
+                            <input type="text" id="postTitle" placeholder="e.g., Fresh produce available" required>
+                            <div class="error-message" id="titleError"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="postDetails">Details / Directions <span class="required">*</span></label>
+                            <textarea id="postDetails" rows="4"
+                                placeholder="Describe what's available and pickup instructions..." required></textarea>
+                            <div class="error-message" id="detailsError"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="neighborhood">City / Neighborhood</label>
+                            <select id="neighborhood">
+                                <option value="">Select a city/neighborhood...</option>
+                                <option value="Alpine">Alpine</option>
+                                <option value="Balboa Park">Balboa Park</option>
+                                <option value="Bankers Hill">Bankers Hill</option>
+                                <option value="Barrio Logan">Barrio Logan</option>
+                                <option value="Bay Ho">Bay Ho</option>
+                                <option value="Bay Park">Bay Park</option>
+                                <option value="Black Mountain Ranch">Black Mountain Ranch</option>
+                                <option value="Bonita">Bonita</option>
+                                <option value="Bonsall">Bonsall</option>
+                                <option value="Borrego Springs">Borrego Springs</option>
+                                <option value="Carlsbad">Carlsbad</option>
+                                <option value="Carmel Mountain Ranch">Carmel Mountain Ranch</option>
+                                <option value="Carmel Valley">Carmel Valley</option>
+                                <option value="Chula Vista">Chula Vista</option>
+                                <option value="City Heights">City Heights</option>
+                                <option value="Clairemont">Clairemont</option>
+                                <option value="College Area">College Area</option>
+                                <option value="Coronado">Coronado</option>
+                                <option value="Del Mar">Del Mar</option>
+                                <option value="Del Sur">Del Sur</option>
+                                <option value="Downtown">Downtown</option>
+                                <option value="East Village">East Village</option>
+                                <option value="Eastlake">Eastlake</option>
+                                <option value="El Cajon">El Cajon</option>
+                                <option value="Encanto">Encanto</option>
+                                <option value="Encinitas">Encinitas</option>
+                                <option value="Escondido">Escondido</option>
+                                <option value="Fallbrook">Fallbrook</option>
+                                <option value="Gaslamp Quarter">Gaslamp Quarter</option>
+                                <option value="Golden Hill">Golden Hill</option>
+                                <option value="Grantville">Grantville</option>
+                                <option value="Imperial Beach">Imperial Beach</option>
+                                <option value="Jamul">Jamul</option>
+                                <option value="Kearny Mesa">Kearny Mesa</option>
+                                <option value="La Jolla">La Jolla</option>
+                                <option value="La Mesa">La Mesa</option>
+                                <option value="Lake Murray">Lake Murray</option>
+                                <option value="Lakeside">Lakeside</option>
+                                <option value="Lemon Grove">Lemon Grove</option>
+                                <option value="Linda Vista">Linda Vista</option>
+                                <option value="Little Italy">Little Italy</option>
+                                <option value="Logan Heights">Logan Heights</option>
+                                <option value="Loma Portal">Loma Portal</option>
+                                <option value="Midway">Midway</option>
+                                <option value="Mira Mesa">Mira Mesa</option>
+                                <option value="Miramar">Miramar</option>
+                                <option value="Mission Bay">Mission Bay</option>
+                                <option value="Mission Beach">Mission Beach</option>
+                                <option value="Mission Hills">Mission Hills</option>
+                                <option value="Mission Valley">Mission Valley</option>
+                                <option value="National City">National City</option>
+                                <option value="Navajo">Navajo</option>
+                                <option value="Nestor">Nestor</option>
+                                <option value="Normal Heights">Normal Heights</option>
+                                <option value="North Park">North Park</option>
+                                <option value="Ocean Beach">Ocean Beach</option>
+                                <option value="Oceanside">Oceanside</option>
+                                <option value="Old Town">Old Town</option>
+                                <option value="Otay Mesa">Otay Mesa</option>
+                                <option value="Pacific Beach">Pacific Beach</option>
+                                <option value="Paradise Hills">Paradise Hills</option>
+                                <option value="Point Loma">Point Loma</option>
+                                <option value="Poway">Poway</option>
+                                <option value="Ramona">Ramona</option>
+                                <option value="Rancho Bernardo">Rancho Bernardo</option>
+                                <option value="Rancho Peñasquitos">Rancho Peñasquitos</option>
+                                <option value="Rancho San Diego">Rancho San Diego</option>
+                                <option value="Rancho Santa Fe">Rancho Santa Fe</option>
+                                <option value="Rolando">Rolando</option>
+                                <option value="San Carlos">San Carlos</option>
+                                <option value="San Marcos">San Marcos</option>
+                                <option value="San Ysidro">San Ysidro</option>
+                                <option value="Santee">Santee</option>
+                                <option value="Scripps Ranch">Scripps Ranch</option>
+                                <option value="Serra Mesa">Serra Mesa</option>
+                                <option value="Skyline">Skyline</option>
+                                <option value="Solana Beach">Solana Beach</option>
+                                <option value="Sorrento Valley">Sorrento Valley</option>
+                                <option value="South Park">South Park</option>
+                                <option value="Spring Valley">Spring Valley</option>
+                                <option value="Sunset Cliffs">Sunset Cliffs</option>
+                                <option value="Tierrasanta">Tierrasanta</option>
+                                <option value="University City">University City</option>
+                                <option value="University Heights">University Heights</option>
+                                <option value="Valley Center">Valley Center</option>
+                                <option value="Vista">Vista</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="locationName">Location Name</label>
+                            <input type="text" id="locationName" placeholder="e.g., St. Mary's Church">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="address">Address</label>
+                            <input type="text" id="address" placeholder="e.g., 1234 Main St, San Diego, CA 92101">
+                            <div class="helper-text">Address will be geocoded and shown on the map</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="imageUrl">Image URL</label>
+                            <input type="url" id="imageUrl" placeholder="https://example.com/image.jpg">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tags">Tags (comma-separated)</label>
+                            <input type="text" id="tags" placeholder="e.g., fresh produce, pantry, emergency">
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" id="clearBtn" class="btn btn-secondary">Clear</button>
+                            <button type="submit" class="btn btn-primary">Post</button>
+                        </div>
+                    </form>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDHVfgIeU9ewuBf7AmM8kusV6kO-1nV7lQ&callback=initMap"
+        async defer></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
