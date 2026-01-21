@@ -471,24 +471,26 @@ function createPostCard(post) {
 
     return `
         <article class="post-card" data-post-id="${post.id}">
-            <div class="post-header">
-                <div class="post-author">
-                    <span class="author-name">${escapeHtml(post.author)}</span>
-                    <span class="org-badge ${orgClass}">${escapeHtml(post.orgType)}</span>
+            <div class="post-clickable" data-post-id="${post.id}">
+                <div class="post-header">
+                    <div class="post-author">
+                        <span class="author-name">${escapeHtml(post.author)}</span>
+                        <span class="org-badge ${orgClass}">${escapeHtml(post.orgType)}</span>
+                    </div>
+                    <span class="time-label">${timeLabel}</span>
                 </div>
-                <span class="time-label">${timeLabel}</span>
+                
+                <!-- Enhanced Preview: Type of Assistance + Neighborhood -->
+                <div class="post-preview">
+                    ${primaryTag ? `<span class="primary-tag">🏷️ ${escapeHtml(primaryTag)}</span>` : ''}
+                    ${post.neighborhood ? `<span class="primary-neighborhood">📍 ${escapeHtml(post.neighborhood)}</span>` : ''}
+                </div>
+                
+                <h3 class="post-title">${escapeHtml(post.title)}</h3>
+                <p class="post-details">${escapeHtml(post.details)}</p>
+                
+                ${post.imageUrl ? `<img src="${escapeHtml(post.imageUrl)}" alt="${escapeHtml(post.title)}" class="post-image" loading="lazy">` : ''}
             </div>
-            
-            <!-- Enhanced Preview: Type of Assistance + Neighborhood -->
-            <div class="post-preview">
-                ${primaryTag ? `<span class="primary-tag">🏷️ ${escapeHtml(primaryTag)}</span>` : ''}
-                ${post.neighborhood ? `<span class="primary-neighborhood">📍 ${escapeHtml(post.neighborhood)}</span>` : ''}
-            </div>
-            
-            <h3 class="post-title">${escapeHtml(post.title)}</h3>
-            <p class="post-details">${escapeHtml(post.details)}</p>
-            
-            ${post.imageUrl ? `<img src="${escapeHtml(post.imageUrl)}" alt="${escapeHtml(post.title)}" class="post-image" loading="lazy">` : ''}
             
             <!-- Always Show Full Details -->
             
@@ -618,11 +620,15 @@ function handleFeedClick(e) {
         return;
     }
 
-    // Post card click to expand/collapse
+    // Post card click to zoom map to location
     const clickableArea = e.target.closest('.post-clickable');
     if (clickableArea) {
         const postId = clickableArea.getAttribute('data-post-id');
-        togglePostExpansion(postId);
+        const post = posts.find(p => p.id === postId);
+        if (post && post.lat && post.lng) {
+            panMapToLocation(post.lat, post.lng);
+            showNotification('📍 Map zoomed to location!');
+        }
         return;
     }
 }
