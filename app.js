@@ -38,7 +38,7 @@ class Post {
 
         return 'Walk-in';
     }
-
+    //
     extractFoodAvailability(details, tags) {
         if (!details && (!tags || tags.length === 0)) return 'Various items available';
 
