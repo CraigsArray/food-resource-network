@@ -629,6 +629,12 @@ function handleFeedClick(e) {
             panMapToLocation(post.lat, post.lng);
             showNotification('📍 Map zoomed to location!');
         }
+        
+        // Toggle expanded class on the post card
+        const postCard = clickableArea.closest('.post-card');
+        if (postCard) {
+            postCard.classList.toggle('expanded');
+        }
         return;
     }
 }

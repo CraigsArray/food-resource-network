@@ -363,6 +363,11 @@ body {
     margin-bottom: var(--spacing-md);
     line-height: 1.6;
     font-size: 0.95rem;
+    display: none;
+}
+
+.post-card.expanded .post-details {
+    display: block;
 }
 
 .post-image {
@@ -380,6 +385,11 @@ body {
     padding-top: var(--spacing-lg);
     border-top: 2px solid var(--color-border);
     animation: expandIn var(--transition-base) ease-out;
+    display: none;
+}
+
+.post-card.expanded .expanded-details {
+    display: block;
 }
 
 @keyframes expandIn {
