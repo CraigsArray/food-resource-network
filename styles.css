@@ -223,6 +223,7 @@ body {
     transition: all var(--transition-base);
     position: relative;
     overflow: hidden;
+    cursor: pointer;
 }
 
 .post-card.expanded {

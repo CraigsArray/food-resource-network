@@ -620,20 +620,20 @@ function handleFeedClick(e) {
         return;
     }
 
-    // Post card click to zoom map to location
-    const clickableArea = e.target.closest('.post-clickable');
-    if (clickableArea) {
-        const postId = clickableArea.getAttribute('data-post-id');
-        const post = posts.find(p => p.id === postId);
-        if (post && post.lat && post.lng) {
-            panMapToLocation(post.lat, post.lng);
-            showNotification('📍 Map zoomed to location!');
-        }
-        
+    // Post card click to expand and zoom map
+    const postCard = e.target.closest('.post-card');
+    if (postCard) {
         // Toggle expanded class on the post card
-        const postCard = clickableArea.closest('.post-card');
-        if (postCard) {
-            postCard.classList.toggle('expanded');
+        postCard.classList.toggle('expanded');
+        
+        // Pan map if expanding
+        if (postCard.classList.contains('expanded')) {
+            const postId = postCard.getAttribute('data-post-id');
+            const post = posts.find(p => p.id === postId);
+            if (post && post.lat && post.lng) {
+                panMapToLocation(post.lat, post.lng);
+                showNotification('📍 Map zoomed to location!');
+            }
         }
         return;
     }
