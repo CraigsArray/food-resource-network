@@ -385,26 +385,11 @@ body {
     margin-top: var(--spacing-lg);
     padding-top: var(--spacing-lg);
     border-top: 2px solid var(--color-border);
-    animation: expandIn var(--transition-base) ease-out;
     display: none;
 }
 
 .post-card.expanded .expanded-details {
     display: block;
-}
-
-@keyframes expandIn {
-    from {
-        opacity: 0;
-        max-height: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        max-height: 1000px;
-        transform: translateY(0);
-    }
 }
 
 .detail-row {
