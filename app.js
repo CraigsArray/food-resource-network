@@ -626,8 +626,16 @@ function handleFeedClick(e) {
         // Toggle expanded class on the post card
         postCard.classList.toggle('expanded');
         
+        // Explicitly set display styles to guarantee visibility changes
+        const isExpanded = postCard.classList.contains('expanded');
+        const postDetails = postCard.querySelector('.post-details');
+        const expandedDetails = postCard.querySelector('.expanded-details');
+        
+        if (postDetails) postDetails.style.display = isExpanded ? 'block' : 'none';
+        if (expandedDetails) expandedDetails.style.display = isExpanded ? 'block' : 'none';
+        
         // Pan map if expanding
-        if (postCard.classList.contains('expanded')) {
+        if (isExpanded) {
             const postId = postCard.getAttribute('data-post-id');
             const post = posts.find(p => p.id === postId);
             if (post && post.lat && post.lng) {
