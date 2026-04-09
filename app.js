@@ -441,9 +441,6 @@ function panMapToLocation(lat, lng) {
 
     map.panTo({ lat, lng });
     map.setZoom(15);
-
-    // Scroll to map
-    document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ===== RENDERING =====
