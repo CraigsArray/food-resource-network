@@ -477,73 +477,56 @@ function createPostCard(post) {
                     <span class="time-label">${timeLabel}</span>
                 </div>
                 
-                <!-- Enhanced Preview: Type of Assistance + Neighborhood -->
-                <div class="post-preview">
-                    ${primaryTag ? `<span class="primary-tag">🏷️ ${escapeHtml(primaryTag)}</span>` : ''}
+                <div class="location-summary" style="margin-bottom: var(--spacing-sm);">
                     ${post.neighborhood ? `<span class="primary-neighborhood">📍 ${escapeHtml(post.neighborhood)}</span>` : ''}
+                    ${post.address ? `<div style="font-size: 0.85rem; color: var(--color-text-secondary); margin-top: 6px;">${escapeHtml(post.address)}</div>` : ''}
                 </div>
                 
-                <h3 class="post-title">${escapeHtml(post.title)}</h3>
-                <p class="post-details">${escapeHtml(post.details)}</p>
-                
-                ${post.imageUrl ? `<img src="${escapeHtml(post.imageUrl)}" alt="${escapeHtml(post.title)}" class="post-image" loading="lazy">` : ''}
-            </div>
-            
-            <!-- Always Show Full Details -->
-            
-                <div class="expanded-details">
-                    <div class="detail-row">
-                        <span class="detail-label">📍 Pickup Address:</span>
-                        <span class="detail-value">${escapeHtml(post.address || post.locationName || 'Contact for location')}</span>
+                <div class="toggle-details" style="display: none;">
+                    <div class="post-preview" style="margin-top: 12px; margin-bottom: 8px;">
+                        ${primaryTag ? `<span class="primary-tag">🏷️ ${escapeHtml(primaryTag)}</span>` : ''}
                     </div>
-                    <div class="detail-row">
-                        <span class="detail-label">🚗 Means of Pickup:</span>
-                        <span class="detail-value">${escapeHtml(post.meansOfPickup)}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">🍎 Food Availability:</span>
-                        <span class="detail-value">${escapeHtml(post.foodAvailability)}</span>
-                    </div>
-                    ${post.contact ? `
+                    
+                    <h3 class="post-title">${escapeHtml(post.title)}</h3>
+                    <p class="post-details" style="display: block;">${escapeHtml(post.details)}</p>
+                    
+                    ${post.imageUrl ? `<img src="${escapeHtml(post.imageUrl)}" alt="${escapeHtml(post.title)}" class="post-image" loading="lazy">` : ''}
+                    
+                    <div class="expanded-details" style="display: block; margin-top: 16px; padding-top: 16px; border-top: 2px solid var(--color-border);">
                         <div class="detail-row">
-                            <span class="detail-label">📞 Contact:</span>
-                            <span class="detail-value">${escapeHtml(post.contact)}</span>
+                            <span class="detail-label">📍 Pickup Name:</span>
+                            <span class="detail-value">${escapeHtml(post.locationName || 'Contact for location')}</span>
                         </div>
-                    ` : ''}
-                    
-                    ${createLocationBlock(post)}
-                    
-                    ${post.tags.length > 0 ? `
-                        <div class="tags-container">
-                            ${post.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
+                        <div class="detail-row">
+                            <span class="detail-label">🚗 Means of Pickup:</span>
+                            <span class="detail-value">${escapeHtml(post.meansOfPickup)}</span>
                         </div>
-                    ` : ''}
-                    
-                    <div class="post-actions">
-                        <button class="action-btn copy-btn" data-details="${escapeHtml(post.details)}">
-                            📋 Copy directions
-                        </button>
+                        <div class="detail-row">
+                            <span class="detail-label">🍎 Food Availability:</span>
+                            <span class="detail-value">${escapeHtml(post.foodAvailability)}</span>
+                        </div>
+                        ${post.contact ? `
+                            <div class="detail-row">
+                                <span class="detail-label">📞 Contact:</span>
+                                <span class="detail-value">${escapeHtml(post.contact)}</span>
+                            </div>
+                        ` : ''}
+                        
+                        ${post.tags.length > 0 ? `
+                            <div class="tags-container" style="margin-top: 12px;">
+                                ${post.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="post-actions" style="margin-top: 12px;">
+                            <button class="action-btn copy-btn" data-details="${escapeHtml(post.details)}">
+                                📋 Copy directions
+                            </button>
+                        </div>
                     </div>
                 </div>
-
-        </article>
-    `;
-}
-
-function createLocationBlock(post) {
-    if (!post.neighborhood && !post.locationName && !post.address) {
-        return '';
-    }
-
-    return `
-        <div class="location-block">
-            <span class="location-icon">📍</span>
-            <div class="location-info">
-                ${post.neighborhood ? `<div class="location-neighborhood">${escapeHtml(post.neighborhood)}</div>` : ''}
-                ${post.locationName ? `<div class="location-name">${escapeHtml(post.locationName)}</div>` : ''}
-                ${post.address ? `<div class="location-address">${escapeHtml(post.address)}</div>` : ''}
             </div>
-        </div>
+        </article>
     `;
 }
 
@@ -580,10 +563,15 @@ function sortPosts(postsToSort) {
     return postsToSort.sort((a, b) => b.createdAt - a.createdAt);
 }
 
-// ===== EVENT LISTENERS =====
+let listenersAttached = false;
 function attachEventListeners() {
+    if (listenersAttached) return;
+
     // Form submission
     const form = document.getElementById('createPostForm');
+    if (!form) return; // Wait for DOM to be ready
+
+    listenersAttached = true;
     form.addEventListener('submit', handleFormSubmit);
 
     // Clear button
@@ -620,24 +608,20 @@ function handleFeedClick(e) {
     // Post card click to expand and zoom map
     const postCard = e.target.closest('.post-card');
     if (postCard) {
-        // Toggle expanded class on the post card
-        postCard.classList.toggle('expanded');
+        const toggleDetails = postCard.querySelector('.toggle-details');
         
-        // Explicitly set display styles to guarantee visibility changes
-        const isExpanded = postCard.classList.contains('expanded');
-        const postDetails = postCard.querySelector('.post-details');
-        const expandedDetails = postCard.querySelector('.expanded-details');
-        
-        if (postDetails) postDetails.style.display = isExpanded ? 'block' : 'none';
-        if (expandedDetails) expandedDetails.style.display = isExpanded ? 'block' : 'none';
-        
-        // Pan map if expanding
-        if (isExpanded) {
-            const postId = postCard.getAttribute('data-post-id');
-            const post = posts.find(p => p.id === postId);
-            if (post && post.lat && post.lng) {
-                panMapToLocation(post.lat, post.lng);
-                showNotification('📍 Map zoomed to location!');
+        if (toggleDetails) {
+            const isExpanded = toggleDetails.style.display === 'block';
+            toggleDetails.style.display = isExpanded ? 'none' : 'block';
+
+            // Pan map if expanding
+            if (!isExpanded) {
+                const postId = postCard.getAttribute('data-post-id');
+                const post = posts.find(p => p.id === postId);
+                if (post && post.lat && post.lng) {
+                    panMapToLocation(post.lat, post.lng);
+                    showNotification('📍 Map zoomed to location!');
+                }
             }
         }
         return;
