@@ -1,0 +1,147 @@
+Create a professional academic capstone presentation titled "East County Food Network" with a clean, modern design using deep indigo and slate tones. The presentation should feel community-focused and data-driven. Include 10 slides as outlined below.
+
+---
+
+Slide 1 — Title Slide
+Title: East County Food Network
+Subtitle: A Community-Driven Web Platform for Food Resource Discovery in East San Diego County
+Author: [Your Name]
+Course: BDA 600 Capstone
+Include a compelling background image related to community food distribution or fresh produce.
+
+---
+
+Slide 2 — The Problem
+Title: Food Insecurity in East San Diego County
+- East San Diego County (El Cajon, Santee, La Mesa, Spring Valley) has significant food insecurity rates
+- Existing resources are fragmented — no single place to find what is available today
+- Community members don't know which pantries are open, what they offer, or how to get there
+- Organizations struggle to publicize distribution events in real time
+- Result: food goes to waste while families go without
+Include a relevant statistic or map visual of the East County region.
+
+---
+
+Slide 3 — Project Goals
+Title: What We Set Out to Build
+- A centralized, real-time directory of food resources for East San Diego County
+- Enable community organizations to post and update resource listings instantly
+- Surface "Happening Now" events so users can act on current opportunities
+- Provide map-based navigation to any listed resource
+- Support multiple resource types: food pantries, hot meals, mobile pantries, SNAP/CalFresh assistance, baby & infant supplies, senior services
+- Make the platform accessible on any device
+
+---
+
+Slide 4 — Solution Overview
+Title: East County Food Network — Platform Overview
+- Live community feed of food resource posts, sorted by urgency (happening now → upcoming → evergreen)
+- Interactive Google Maps integration with a marker for every listed location
+- Smart badges: "Happening Now" with a live pulse animation for active events
+- Countdown-style "Next Occurrence" dates pulled from a structured event schedule
+- Category and tag system for quick filtering
+- Admin panel for organizations to post new resources in seconds
+- Dark and light mode for accessibility and readability
+Include a mockup or screenshot placeholder of the web interface.
+
+---
+
+Slide 5 — Key Features Deep Dive
+Title: Smart Feed & Event Scheduling
+- Each resource post supports multiple event occurrences (recurring distributions, one-time events)
+- The feed automatically ranks posts: currently active events surface first, upcoming events second, standing resources last
+- Posts expire automatically — no stale data shown to users
+- Inactive listings are hidden at the database level, not just the UI
+- "Read more / Show less" for long descriptions keeps the feed scannable
+- Click any post to highlight its map marker; click any map marker to scroll to its post
+Include a two-column visual showing a sample post card and its map pin.
+
+---
+
+Slide 6 — Technology Stack
+Title: Built With Modern Web Technologies
+Frontend:
+- React 19 with Vite for fast, component-based UI
+- Tailwind CSS v4 for responsive, utility-first styling
+- Lucide React for a consistent icon system
+
+Backend & Data:
+- Supabase (PostgreSQL) for the database, real-time queries, and storage
+- Two-table schema: posts + post_occurrences for flexible event scheduling
+
+Mapping & Location:
+- Google Maps JavaScript API with geocoding fallback (address → coordinates)
+
+Data Sourcing:
+- Playwright web scraper to seed initial data from Feeding San Diego and San Diego Food Bank
+
+---
+
+Slide 7 — Data Architecture
+Title: Database Schema & Data Flow
+Describe the two-table relational model:
+- posts table: title, description, category, address, city, zip, latitude, longitude, image_url, tags (array), is_active (boolean), expires_at, author/org metadata
+- post_occurrences table: linked to posts via post_id; stores start_time, end_time, notes, is_cancelled, expires_at per event
+Data flow:
+1. Admin submits a post via the Admin Panel
+2. Supabase inserts the post row and linked occurrence rows
+3. Frontend queries posts with active + non-expired filter
+4. Client-side logic classifies each post as "now / upcoming / none" and sorts accordingly
+Include a simple entity-relationship diagram.
+
+---
+
+Slide 8 — Web Scraper & Data Seeding
+Title: Automated Data Collection with Playwright
+- Built a Node.js scraper using Playwright (headless Chromium) to bootstrap initial resource data
+- Targets Feeding San Diego and San Diego Food Bank public locator pages
+- Extracts: organization name, address, hours, eligibility, food types, holiday schedules, tags
+- Deduplication by normalized name + address to prevent duplicate entries
+- Output: structured JSON ready to import into Supabase
+- Scraper is a one-time/periodic tool — the live platform is community-maintained going forward
+Include a simple flowchart: Website → Playwright Scraper → JSON → Supabase.
+
+---
+
+Slide 9 — Outcomes & Impact
+Title: What This Platform Delivers
+For community members:
+- One destination to find food help, with real-time availability
+- Map-based navigation directly from the listing to the location
+- Clear indication of what is available today vs. coming up
+
+For organizations:
+- Zero-friction posting — title, location, time, and a description is all that is needed
+- Full control over listing lifecycle (active/inactive toggle, expiration dates)
+
+For the community:
+- Reduced food waste by connecting surplus to need in real time
+- Increased dignity and ease of access for families and seniors
+- A reusable platform model adaptable to other counties or resource types
+
+---
+
+Slide 10 — Lessons Learned & Future Work
+Title: Reflections & Next Steps
+Lessons Learned:
+- Real-time data freshness matters more than completeness — active/expired filtering was essential
+- Geocoding fallback (address → lat/lng) is critical when coordinates aren't provided
+- Designing for recurring events (occurrences model) adds complexity but reflects real-world needs
+
+Future Enhancements:
+- User authentication so organizations manage only their own listings
+- Push notifications for "Happening Now" events near a user's location
+- Community reporting to flag inaccurate or outdated listings
+- Mobile app (React Native) for offline-friendly access
+- Integration with 211 San Diego and county-level food assistance databases
+- Multilingual support (Spanish-first) for East County demographics
+
+---
+
+Design notes for Gamma:
+- Color palette: deep indigo (#4338ca), slate (#1e293b), emerald accents (#10b981) for "live" elements
+- Use clean card-style layouts for feature slides
+- Include icons for each bullet point where appropriate
+- Use a subtle gradient background throughout
+- Font pairing: bold sans-serif headers, clean body text
+- Keep each slide uncluttered — one clear idea per slide

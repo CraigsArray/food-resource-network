@@ -1,89 +1,64 @@
-# Food Resource Network - Setup Instructions
+# Food Network MVP
 
-## Google Maps API Setup
+A mobile-first web application that displays a scrolling feed of food resources (food banks, distributions, meal services) across San Diego County.
 
-To use the map functionality, you need a Google Maps API key:
+## Tech Stack
+* **Frontend:** React + Vite
+* **Styling:** Tailwind CSS (v4)
+* **Backend:** Supabase (PostgreSQL, Auth, Storage)
+* **Routing:** React Router DOM
+* **Icons:** Lucide React
+* **Date Formatting:** date-fns
 
-### Step 1: Get a Google Maps API Key
+## Project Structure
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the following APIs:
-   - Maps JavaScript API
-   - Geocoding API
-4. Go to "Credentials" and create an API key
-5. (Optional) Restrict the key to your domain for security
-
-### Step 2: Add Your API Key
-
-Open `index.html` and find this line (around line 213):
-
-```html
-<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap" async defer></script>
+```
+food-network/
+├── public/                 # Static assets
+├── src/
+│   ├── components/         # Reusable UI components
+│   │   ├── FilterBar.jsx   # Horizontal scrolling category filter
+│   │   └── PostCard.jsx    # Individual food resource display card
+│   ├── hooks/              # Custom React hooks
+│   │   └── usePosts.js     # Supabase data fetching logic
+│   ├── pages/              # Page components
+│   │   ├── Admin.jsx       # Simple form to add new resources to Supabase
+│   │   └── Home.jsx        # Main feed displaying food resources
+│   ├── supabase.js         # Supabase client configuration
+│   ├── App.jsx             # Main application component & routing (Currently modified for connection testing)
+│   ├── main.jsx            # Application entry point
+│   └── index.css           # Global styles and Tailwind configuration
+├── .env                    # Environment variables (Supabase keys)
+├── supabase-schema.sql     # Database schema, table definitions, and RLS policies
+└── vite.config.js          # Vite build and tailwind plugin configuration
 ```
 
-Replace `YOUR_API_KEY` with your actual Google Maps API key.
+## Features Implemented
+* **Mobile-First Feed:** A responsive, scannable list of food resources with essential details (time, location, tags).
+* **Category Filtering:** Filter resources by type (e.g., Groceries, Hot Meals).
+* **Get Directions:** Direct integration linking resource addresses to Google Maps.
+* **Database Schema:** Fully defined PostgreSQL schema for `organizations` and `posts` with Row Level Security.
+* **Admin Page:** Simple interface for creating new posts and uploading images directly to Supabase storage.
 
-### Step 3: Test the App
+## Setup Instructions
 
-Simply open `index.html` in your browser. The map should load with pins showing all food resource locations.
+1. **Install Dependencies**
+   ```bash
+   npm install
+   ```
 
-## Features
+2. **Environment Setup**
+   Ensure your `.env` file is present in the root directory and contains your Supabase credentials.
 
-✅ **Google Maps Integration**
-- Interactive map showing all food resource locations
-- Color-coded pins by organization type:
-  - Purple: Church
-  - Green: Community Member
-  - Blue: Nonprofit
-  - Pink: Feeding San Diego Access Point
-- Click pins to see post details
+3. **Database Setup**
+   Copy the contents of `supabase-schema.sql` and run it in your Supabase project's SQL Editor to create the necessary tables, storage buckets, and security policies.
 
-✅ **Enhanced Post Cards**
-- Primary tag displayed at top (type of assistance)
-- Neighborhood prominently shown
-- "Show on map" button for posts with coordinates
+4. **Run Locally**
+   ```bash
+   npm run dev
+   ```
 
-✅ **Address Geocoding**
-- Enter an address when creating a post
-- Automatically converted to coordinates and shown on map
-
-✅ **100+ San Diego Locations**
-- Comprehensive dropdown of all San Diego cities and neighborhoods
-- Alphabetically sorted for easy selection
-
-## No Longer Included
-
-❌ Search functionality (removed as requested)
-❌ Manual latitude/longitude entry (replaced with geocoding)
-
-## How to Use
-
-1. **Browse the community feed** - See all food donations and resources
-2. **Click map pins** - View location details
-3. **Create a post** - Fill out the form with details and address
-4. **Auto-geocoding** - Addresses are automatically converted to map pins
-5. **Show on map** - Click the button on any post card to center the map
-
-## Troubleshooting
-
-**Map shows "Loading map..." forever:**
-- Check that you've added your Google Maps API key
-- Ensure Maps JavaScript API and Geocoding API are enabled
-- Check browser console for errors
-
-**Geocoding doesn't work:**
-- Make sure Geocoding API is enabled in Google Cloud Console
-- Verify your API key has permission to use Geocoding API
-- Address should include San Diego area (it's automatically appended)
-
-**Map looks blank/gray:**
-- This is normal before adding your API key
-- The map uses dark theme styling to match the app design
-
-## Data Persistence
-
-Posts are saved to localStorage and persist across page refreshes. To reset:
-- Open browser DevTools (F12)
-- Go to Application > Local Storage
-- Delete the `foodResourcePosts` entry
+5. **Deployment**
+   The application is configured to be deployed easily via Netlify.
+   * **Build Command:** `npm run build`
+   * **Publish Directory:** `dist`
