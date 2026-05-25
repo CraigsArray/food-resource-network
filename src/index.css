@@ -55,9 +55,6 @@ body {
   transition: background 200ms ease, color 200ms ease;
 }
 
-@media (min-width: 600px) {
-  .nav-subtitle { display: inline !important; }
-}
 
 @layer components {
   .btn-primary {

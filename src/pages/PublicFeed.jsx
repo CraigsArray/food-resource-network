@@ -177,20 +177,23 @@ export default function PublicFeed() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg-dark)', transition: 'background 200ms ease' }}>
 
-      {/* Header — same 64px sticky bar in both modes, colors flip */}
+      {/* Header — same height in both modes, colors flip */}
       <header style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: isDark
           ? 'linear-gradient(135deg, hsl(28,95%,55%) 0%, hsl(340,82%,52%) 100%)'
           : 'var(--color-bg-dark)',
         borderBottom: isDark ? 'none' : '1px solid var(--color-border)',
-        boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.25)' : '0 1px 6px rgba(0,0,0,0.06)',
+        boxShadow: isDark ? '0 2px 16px rgba(0,0,0,0.28)' : '0 1px 6px rgba(0,0,0,0.06)',
         transition: 'background 200ms ease, box-shadow 200ms ease',
       }}>
-        <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 1.5rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <div>
+        <div style={{ maxWidth: 960, margin: '0 auto', padding: '0.875rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+
+          {/* Left: title + subtitles */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
             <span style={{
-              fontFamily: 'Outfit, sans-serif', fontWeight: 800, fontSize: '1.15rem',
+              fontFamily: 'Outfit, sans-serif', fontWeight: 800,
+              fontSize: 'clamp(1.15rem, 3vw, 1.5rem)', lineHeight: 1.2,
               ...(isDark
                 ? { color: 'white' }
                 : { background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }
@@ -198,17 +201,22 @@ export default function PublicFeed() {
             }}>
               East County Food Network
             </span>
-            <span style={{ marginLeft: '0.75rem', fontSize: '0.8rem', color: isDark ? 'rgba(255,255,255,0.8)' : 'var(--color-text-muted)', display: 'none' }} className="nav-subtitle">
-              Free food resources across San Diego County
+            <span style={{ fontSize: '0.78rem', color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--color-text-secondary)', lineHeight: 1.3 }}>
+              Aggregated food pantries &amp; distributions in East County
+            </span>
+            <span style={{ fontSize: '0.72rem', color: isDark ? 'rgba(255,255,255,0.6)' : 'var(--color-text-muted)', lineHeight: 1.3 }}>
+              Maintained by the <strong style={{ color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--color-text-secondary)', fontWeight: 600 }}>El Cajon Collaborative</strong>
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+
+          {/* Right: theme toggle + nav */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
             <button onClick={toggleTheme} style={{
               background: isDark ? 'rgba(255,255,255,0.15)' : 'none',
               border: isDark ? '1px solid rgba(255,255,255,0.3)' : '1px solid var(--color-border)',
               color: isDark ? 'white' : 'var(--color-text-secondary)',
               padding: '5px 13px', borderRadius: 20, fontSize: '0.78rem',
-              fontWeight: 600, cursor: 'pointer', transition: 'all 150ms',
+              fontWeight: 600, cursor: 'pointer', transition: 'all 150ms', whiteSpace: 'nowrap',
             }}>
               {isDark ? '☀️ Light' : '🌙 Dark'}
             </button>
