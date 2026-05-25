@@ -15,6 +15,12 @@ export default function AuthCallback() {
       // when detectSessionInUrl is true (the default). We wait for the session
       // to materialise via onAuthStateChange, then call the RPC.
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          subscription.unsubscribe()
+          navigate('/reset-password')
+          return
+        }
+
         if (event !== 'SIGNED_IN' || !session) return
 
         subscription.unsubscribe()
