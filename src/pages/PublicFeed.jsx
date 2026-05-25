@@ -209,17 +209,8 @@ export default function PublicFeed() {
             </span>
           </div>
 
-          {/* Right: theme toggle + nav */}
+          {/* Right: nav only */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
-            <button onClick={toggleTheme} style={{
-              background: isDark ? 'rgba(255,255,255,0.15)' : 'none',
-              border: isDark ? '1px solid rgba(255,255,255,0.3)' : '1px solid var(--color-border)',
-              color: isDark ? 'white' : 'var(--color-text-secondary)',
-              padding: '5px 13px', borderRadius: 20, fontSize: '0.78rem',
-              fontWeight: 600, cursor: 'pointer', transition: 'all 150ms', whiteSpace: 'nowrap',
-            }}>
-              {isDark ? '☀️ Light' : '🌙 Dark'}
-            </button>
             {isAdmin ? (
               <a href="/admin" style={isDark ? darkHeaderLinkStyle : lightHeaderLinkStyle}>Admin →</a>
             ) : session ? (
@@ -371,6 +362,25 @@ export default function PublicFeed() {
           </a>
         </p>
       </div>
+
+      {/* Floating theme toggle */}
+      <button
+        onClick={toggleTheme}
+        title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 200,
+          width: 48, height: 48, borderRadius: '50%',
+          background: isDark ? 'rgba(255,255,255,0.15)' : 'white',
+          border: isDark ? '1px solid rgba(255,255,255,0.25)' : '1px solid var(--color-border)',
+          boxShadow: isDark ? '0 4px 16px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.12)',
+          fontSize: '1.25rem', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 200ms ease',
+          backdropFilter: 'blur(8px)',
+        }}
+      >
+        {isDark ? '☀️' : '🌙'}
+      </button>
 
       {toast && <Notification msg={toast} onDone={() => setToast('')} />}
     </div>
