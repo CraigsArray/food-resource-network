@@ -11,6 +11,7 @@ import PublicFeed           from './pages/PublicFeed'
 import AdminDashboard       from './pages/AdminDashboard'
 import PendingProviders     from './pages/PendingProviders'
 import Widget               from './pages/Widget'
+import IframeFeed           from './pages/IframeFeed'
 import ResetPassword        from './pages/ResetPassword'
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
         <Routes>
           {/* Public */}
           <Route path="/"              element={<PublicFeed />} />
+          <Route path="/iframe"        element={<IframeFeed />} />
           <Route path="/widget"        element={<Widget />} />
           <Route path="/login"         element={<LoginPage />} />
           <Route path="/auth/callback"  element={<AuthCallback />} />

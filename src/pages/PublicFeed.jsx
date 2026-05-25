@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { Calendar, dateFnsLocalizer } from 'react-big-calendar'
+import { format, parse, startOfWeek, getDay } from 'date-fns'
+import { enUS } from 'date-fns/locale'
+import 'react-big-calendar/lib/css/react-big-calendar.css'
+
+const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { 'en-US': enUS } })
 
 const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
@@ -40,16 +46,22 @@ function dateKey(post) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 }
 
+function keyToDate(key) {
+  // Parse key as local time — new Date('YYYY-MM-DD') is UTC and shifts dates in PST
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, m, d) // month is already 0-indexed from dateKey()
+}
+
 function dateLabel(key) {
   if (key === 'no-date') return 'Ongoing'
+  const date     = keyToDate(key)
   const today    = new Date()
   const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1)
-  const d = new Date(key.replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, day) => `${y}-${String(+m + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`))
   const same = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-  const fmt = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  if (same(d, today))    return `Today - ${fmt}`
-  if (same(d, tomorrow)) return `Tomorrow - ${fmt}`
-  return `${d.toLocaleDateString('en-US', { weekday: 'long' })} - ${fmt}`
+  const fmt = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  if (same(date, today))    return `Today - ${fmt}`
+  if (same(date, tomorrow)) return `Tomorrow - ${fmt}`
+  return `${date.toLocaleDateString('en-US', { weekday: 'long' })} - ${fmt}`
 }
 
 function groupPostsByDate(posts) {
@@ -57,18 +69,16 @@ function groupPostsByDate(posts) {
   const order = []
   for (const post of posts) {
     const k = dateKey(post)
-    if (!map.has(k)) {
-      map.set(k, [])
-      order.push(k)
-    }
+    if (!map.has(k)) { map.set(k, []); order.push(k) }
     map.get(k).push(post)
   }
   const today = new Date()
   return order.map(k => {
-    const d = k !== 'no-date'
-      ? new Date(k.replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, day) => `${y}-${String(+m + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`))
-      : null
-    const isToday = d ? (d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()) : false
+    let isToday = false
+    if (k !== 'no-date') {
+      const d = keyToDate(k)
+      isToday = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
+    }
     return { key: k, label: dateLabel(k), isToday, posts: map.get(k) }
   })
 }
@@ -101,7 +111,8 @@ export default function PublicFeed() {
   const [reactions, setReactions] = useState(() => {
     try { return JSON.parse(localStorage.getItem('feedReactions') ?? '{}') } catch { return {} }
   })
-  const [toast, setToast] = useState('')
+  const [toast, setToast]       = useState('')
+  const [activeTab, setActiveTab] = useState('map')
   const mapRef     = useRef(null)
   const mapDivRef  = useRef(null)
   const markersRef = useRef([])
@@ -203,6 +214,19 @@ export default function PublicFeed() {
     saveReactions({ ...reactions, [postId]: { ...r, thumbsUp: r.liked ? r.thumbsUp - 1 : r.thumbsUp + 1, liked: !r.liked } })
   }
 
+  function switchTab(tab) {
+    setActiveTab(tab)
+    if (tab === 'map' && mapRef.current) {
+      setTimeout(() => window.google?.maps.event.trigger(mapRef.current, 'resize'), 50)
+    }
+  }
+
+  function handleCalendarEventClick(event) {
+    const d = new Date(event.start)
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+    document.getElementById(`feed-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   function handleReport(postId) {
     const r = reactions[postId] ?? { thumbsUp: 0, liked: false, reported: false }
     const next = { ...r, reported: !r.reported }
@@ -261,16 +285,95 @@ export default function PublicFeed() {
       {/* Content */}
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem' }}>
 
-        {/* Map */}
-        <div
-          ref={mapDivRef}
-          style={{
-            width: '100%', height: 380, borderRadius: 16, marginBottom: '2rem',
-            background: 'var(--color-bg-light)', overflow: 'hidden',
-            boxShadow: 'var(--shadow-md)',
+        {/* Folder tabs + Map/Calendar */}
+        <div style={{ marginBottom: '2rem' }}>
+
+          {/* Tab strip */}
+          <div style={{ display: 'flex' }}>
+            {[{ id: 'map', label: '🗺️  Map' }, { id: 'calendar', label: '📅  Calendar' }].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => switchTab(tab.id)}
+                style={{
+                  padding: '0.55rem 1.4rem',
+                  fontWeight: activeTab === tab.id ? 700 : 500,
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  border: '1px solid var(--color-border)',
+                  borderBottom: activeTab === tab.id ? `1px solid var(--color-bg-medium)` : '1px solid var(--color-border)',
+                  borderRadius: '10px 10px 0 0',
+                  marginBottom: activeTab === tab.id ? -1 : 0,
+                  marginRight: 4,
+                  background: activeTab === tab.id ? 'var(--color-bg-medium)' : 'var(--color-bg-dark)',
+                  color: activeTab === tab.id ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                  position: 'relative', zIndex: activeTab === tab.id ? 1 : 0,
+                  transition: 'all 150ms',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Content panel */}
+          <div style={{
             border: '1px solid var(--color-border)',
-          }}
-        />
+            borderRadius: '0 10px 10px 10px',
+            overflow: 'hidden',
+            position: 'relative', zIndex: 0,
+            boxShadow: 'var(--shadow-md)',
+          }}>
+            {/* Map — always mounted so Google Maps state is preserved */}
+            <div
+              ref={mapDivRef}
+              style={{
+                width: '100%', height: 400,
+                background: 'var(--color-bg-light)',
+                display: activeTab === 'map' ? 'block' : 'none',
+              }}
+            />
+
+            {/* Calendar */}
+            {activeTab === 'calendar' && (
+              <div style={{ height: 400, background: 'var(--color-bg-medium)', padding: '0.75rem' }}>
+                <style>{`
+                  .rbc-calendar { font-family: Inter, sans-serif; color: var(--color-text-primary); }
+                  .rbc-toolbar button { color: var(--color-text-secondary); border-color: var(--color-border); background: var(--color-bg-dark); border-radius: 8px; font-size: 0.8rem; }
+                  .rbc-toolbar button:hover, .rbc-toolbar button.rbc-active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+                  .rbc-toolbar-label { font-weight: 700; color: var(--color-text-primary); }
+                  .rbc-header { background: var(--color-bg-dark); color: var(--color-text-secondary); border-color: var(--color-border); font-size: 0.78rem; padding: 4px 0; }
+                  .rbc-month-view, .rbc-agenda-view table { border-color: var(--color-border); }
+                  .rbc-day-bg { background: var(--color-bg-medium); }
+                  .rbc-off-range-bg { background: var(--color-bg-dark); opacity: 0.6; }
+                  .rbc-today { background: hsla(28,95%,55%,0.08) !important; }
+                  .rbc-event { background: var(--color-primary); border-radius: 4px; font-size: 0.72rem; border: none; }
+                  .rbc-show-more { color: var(--color-primary); font-size: 0.72rem; }
+                  .rbc-date-cell { color: var(--color-text-secondary); font-size: 0.78rem; }
+                  .rbc-date-cell.rbc-now { color: var(--color-primary); font-weight: 700; }
+                  .rbc-agenda-date-cell, .rbc-agenda-time-cell { color: var(--color-text-secondary); font-size: 0.82rem; }
+                  .rbc-agenda-event-cell { color: var(--color-text-primary); font-size: 0.82rem; }
+                  .rbc-row-segment .rbc-event-content { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                `}</style>
+                <Calendar
+                  localizer={localizer}
+                  events={posts.filter(p => p.start_time).map(p => ({
+                    id:       p.id,
+                    title:    p.title,
+                    start:    new Date(p.start_time),
+                    end:      p.end_time ? new Date(p.end_time) : new Date(p.start_time),
+                    resource: p,
+                  }))}
+                  defaultView="month"
+                  views={['month', 'agenda']}
+                  style={{ height: '100%' }}
+                  onSelectEvent={handleCalendarEventClick}
+                  components={{ event: CalendarEvent }}
+                  popup
+                />
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Feed */}
         <h2 style={{
@@ -288,7 +391,7 @@ export default function PublicFeed() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {groupPostsByDate(posts).map(({ key, label, isToday, posts: group }, gi) => (
-              <div key={key}>
+              <div key={key} id={`feed-${key}`}>
                 {/* Date section header */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '0.75rem',
@@ -474,23 +577,36 @@ export default function PublicFeed() {
         {/* Divider */}
         <div style={{ width: 1, height: 16, background: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)', flexShrink: 0 }} />
 
-        {/* Logo + text */}
+        {/* Logo */}
         <a
           href="https://elcajoncollaborative.org"
           target="_blank"
           rel="noopener noreferrer"
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.2rem', textDecoration: 'none' }}
+          style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}
         >
           <img
             src="/el-cajob-collab.png"
             alt="El Cajon Collaborative"
             style={{ height: 22, width: 'auto', objectFit: 'contain' }}
           />
-          <span style={{ fontSize: '0.65rem', fontWeight: 500, color: isDark ? 'rgba(255,255,255,0.65)' : 'var(--color-text-muted)', whiteSpace: 'nowrap', lineHeight: 1 }}>
-            Maintained by the El Cajon Collaborative
-          </span>
         </a>
       </div>
+    </div>
+  )
+}
+
+function CalendarEvent({ event }) {
+  const post = event.resource
+  return (
+    <div style={{ lineHeight: 1.3, overflow: 'hidden' }}>
+      <div style={{ fontWeight: 600, fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {event.title}
+      </div>
+      {post?.address && (
+        <div style={{ fontSize: '0.67rem', opacity: 0.85, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          📍 {post.address}
+        </div>
+      )}
     </div>
   )
 }
