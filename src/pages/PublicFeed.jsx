@@ -177,45 +177,64 @@ export default function PublicFeed() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg-dark)', transition: 'background 200ms ease' }}>
 
-      {/* Header */}
-      <div style={{ padding: '1.25rem 1.5rem 0' }}>
-        <div className="page-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', position: 'relative', zIndex: 1 }}>
-            <div>
-              <h1>East County Food Network</h1>
-              <p>Free food resources across San Diego County</p>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-              {isAdmin ? (
-                <a href="/admin" style={headerLinkStyle}>Admin →</a>
-              ) : session ? (
-                <a href="/organization-request" style={headerLinkStyle}>My Request</a>
-              ) : (
-                <a href="/login" style={headerLinkStyle}>Provider Login →</a>
-              )}
-              <button
-                onClick={toggleTheme}
-                style={{
-                  background: 'rgba(255,255,255,0.18)',
-                  border: '1px solid rgba(255,255,255,0.28)',
-                  color: 'white',
-                  padding: '5px 14px',
-                  borderRadius: 20,
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  transition: 'background 150ms',
-                }}
-              >
-                {isDark ? '☀️ Light mode' : '🌙 Dark mode'}
-              </button>
+      {/* Header — light: clean nav bar | dark: gradient banner */}
+      {isDark ? (
+        <div style={{ padding: '1.25rem 1.5rem 0' }}>
+          <div className="page-header">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', position: 'relative', zIndex: 1 }}>
+              <div>
+                <h1>East County Food Network</h1>
+                <p>Free food resources across San Diego County</p>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                {isAdmin ? (
+                  <a href="/admin" style={darkHeaderLinkStyle}>Admin →</a>
+                ) : session ? (
+                  <a href="/organization-request" style={darkHeaderLinkStyle}>My Request</a>
+                ) : (
+                  <a href="/login" style={darkHeaderLinkStyle}>Provider Login →</a>
+                )}
+                <button onClick={toggleTheme} style={darkThemeToggleStyle}>☀️ Light mode</button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <header style={{
+          borderBottom: '1px solid var(--color-border)',
+          background: 'var(--color-bg-dark)',
+          position: 'sticky', top: 0, zIndex: 100,
+          boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
+        }}>
+          <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 1.5rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+            <div>
+              <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 800, fontSize: '1.15rem', background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                East County Food Network
+              </span>
+              <span style={{ marginLeft: '0.75rem', fontSize: '0.8rem', color: 'var(--color-text-muted)', display: 'none' }} className="nav-subtitle">
+                Free food resources across San Diego County
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+              <button onClick={toggleTheme} style={{
+                background: 'none', border: '1px solid var(--color-border)',
+                color: 'var(--color-text-secondary)', padding: '5px 13px',
+                borderRadius: 20, fontSize: '0.78rem', fontWeight: 600,
+                cursor: 'pointer', transition: 'all 150ms',
+              }}>
+                🌙 Dark mode
+              </button>
+              {isAdmin ? (
+                <a href="/admin" style={lightHeaderLinkStyle}>Admin →</a>
+              ) : session ? (
+                <a href="/organization-request" style={lightHeaderLinkStyle}>My Request</a>
+              ) : (
+                <a href="/login" style={lightHeaderLinkStyle}>Provider Login →</a>
+              )}
+            </div>
+          </div>
+        </header>
+      )}
 
       {/* Content */}
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem' }}>
@@ -363,7 +382,7 @@ export default function PublicFeed() {
   )
 }
 
-const headerLinkStyle = {
+const darkHeaderLinkStyle = {
   background: 'rgba(255,255,255,0.2)',
   color: 'white',
   padding: '7px 18px',
@@ -372,4 +391,28 @@ const headerLinkStyle = {
   fontSize: '0.85rem',
   textDecoration: 'none',
   border: '1px solid rgba(255,255,255,0.3)',
+}
+
+const darkThemeToggleStyle = {
+  background: 'rgba(255,255,255,0.18)',
+  border: '1px solid rgba(255,255,255,0.28)',
+  color: 'white',
+  padding: '5px 14px',
+  borderRadius: 20,
+  fontSize: '0.78rem',
+  fontWeight: 600,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.35rem',
+}
+
+const lightHeaderLinkStyle = {
+  background: 'linear-gradient(135deg, hsl(28,95%,55%), hsl(340,82%,52%))',
+  color: 'white',
+  padding: '7px 18px',
+  borderRadius: 20,
+  fontWeight: 700,
+  fontSize: '0.85rem',
+  textDecoration: 'none',
 }
