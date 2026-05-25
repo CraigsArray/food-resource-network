@@ -250,10 +250,32 @@ export default function PublicFeed() {
         boxShadow: isDark ? '0 2px 16px rgba(0,0,0,0.28)' : '0 1px 6px rgba(0,0,0,0.06)',
         transition: 'background 200ms ease, box-shadow 200ms ease',
       }}>
-        <div style={{ maxWidth: 960, margin: '0 auto', padding: '0.875rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto', padding: '0.875rem 1.5rem', display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'center', gap: '1rem' }}>
 
-          {/* Left: main title */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+          {/* Left: EC Collab back arrow + logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <a
+              href="https://elcajoncollaborative.org"
+              title="Return to El Cajon Collaborative"
+              style={{ display: 'flex', alignItems: 'center', color: isDark ? 'rgba(255,255,255,0.7)' : 'var(--color-text-muted)', textDecoration: 'none', flexShrink: 0 }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </a>
+            <div style={{ width: 1, height: 16, background: isDark ? 'rgba(255,255,255,0.25)' : 'var(--color-border)', flexShrink: 0 }} />
+            <a
+              href="https://elcajoncollaborative.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}
+            >
+              <img src="/el-cajob-collab.png" alt="El Cajon Collaborative" style={{ height: 26, width: 'auto', objectFit: 'contain' }} />
+            </a>
+          </div>
+
+          {/* Center: title */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', textAlign: 'center', alignItems: 'center' }}>
             <span style={{
               fontFamily: 'Outfit, sans-serif', fontWeight: 800,
               fontSize: 'clamp(1.15rem, 3vw, 1.5rem)', lineHeight: 1.2,
@@ -272,7 +294,7 @@ export default function PublicFeed() {
             </span>
           </div>
 
-          {/* Right: nav only */}
+          {/* Right: nav */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
             {isAdmin ? (
               <a href="/admin" style={isDark ? darkHeaderLinkStyle : lightHeaderLinkStyle}>Admin →</a>
@@ -384,7 +406,7 @@ export default function PublicFeed() {
           marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
           color: 'var(--color-text-primary)',
         }}>
-          📋 Available Resources
+          Upcoming Events, Sorted by Date
         </h2>
 
         {loading ? (
@@ -558,44 +580,6 @@ export default function PublicFeed() {
 
       {toast && <Notification msg={toast} onDone={() => setToast('')} />}
 
-      {/* Fixed EC Collab branding — top-left corner */}
-      <div style={{
-        position: 'fixed', top: 12, left: 12, zIndex: 200,
-        display: 'flex', alignItems: 'center', gap: '0.375rem',
-        background: isDark ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.88)',
-        backdropFilter: 'blur(8px)',
-        border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'}`,
-        borderRadius: 10, padding: '5px 10px 5px 7px',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
-      }}>
-        {/* Back arrow */}
-        <a
-          href="https://elcajoncollaborative.org"
-          title="Return to El Cajon Collaborative"
-          style={{ display: 'flex', alignItems: 'center', color: isDark ? 'rgba(255,255,255,0.7)' : 'var(--color-text-muted)', textDecoration: 'none', flexShrink: 0 }}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </a>
-
-        {/* Divider */}
-        <div style={{ width: 1, height: 16, background: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)', flexShrink: 0 }} />
-
-        {/* Logo + text */}
-        <a
-          href="https://elcajoncollaborative.org"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}
-        >
-          <img
-            src="/el-cajob-collab.png"
-            alt="El Cajon Collaborative"
-            style={{ height: 26, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
-          />
-        </a>
-      </div>
     </div>
   )
 }
