@@ -250,10 +250,10 @@ export default function PublicFeed() {
         boxShadow: isDark ? '0 2px 16px rgba(0,0,0,0.28)' : '0 1px 6px rgba(0,0,0,0.06)',
         transition: 'background 200ms ease, box-shadow 200ms ease',
       }}>
-        <div style={{ maxWidth: 960, margin: '0 auto', padding: '0.875rem 1.5rem', display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto', padding: '0.875rem 1.5rem', display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'stretch', gap: '1rem' }}>
 
           {/* Left: EC Collab back arrow + logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+          <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.375rem' }}>
             <a
               href="https://elcajoncollaborative.org"
               title="Return to El Cajon Collaborative"
@@ -263,19 +263,19 @@ export default function PublicFeed() {
                 <polyline points="15 18 9 12 15 6" />
               </svg>
             </a>
-            <div style={{ width: 1, height: 16, background: isDark ? 'rgba(255,255,255,0.25)' : 'var(--color-border)', flexShrink: 0 }} />
+            <div style={{ width: 1, alignSelf: 'stretch', background: isDark ? 'rgba(255,255,255,0.25)' : 'var(--color-border)', flexShrink: 0 }} />
             <a
               href="https://elcajoncollaborative.org"
               target="_blank"
               rel="noopener noreferrer"
               style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}
             >
-              <img src="/el-cajob-collab.png" alt="El Cajon Collaborative" style={{ height: 26, width: 'auto', objectFit: 'contain' }} />
+              <img src="/el-cajob-collab.png" alt="El Cajon Collaborative" style={{ height: '100%', width: 'auto', objectFit: 'contain', maxHeight: 64 }} />
             </a>
           </div>
 
           {/* Center: title */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', textAlign: 'center', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', textAlign: 'center', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{
               fontFamily: 'Outfit, sans-serif', fontWeight: 800,
               fontSize: 'clamp(1.15rem, 3vw, 1.5rem)', lineHeight: 1.2,
