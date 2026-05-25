@@ -349,24 +349,23 @@ BEGIN
   LIMIT 1;
 
   IF v_org_id IS NOT NULL THEN
+    -- Domain matched a verified org — add as member
     INSERT INTO organization_members (user_id, organization_id, role)
     VALUES (v_user_id, v_org_id, 'member')
     ON CONFLICT (user_id, organization_id) DO NOTHING;
-
-    RETURN jsonb_build_object('redirect', '/admin', 'organization_id', v_org_id, 'matched', true);
   ELSE
-    SELECT EXISTS (
-      SELECT 1 FROM pending_organizations
-      WHERE user_id = v_user_id AND status = 'pending'
-    ) INTO v_pending;
+    -- PILOT MODE: auto-create an org from the user's email domain
+    INSERT INTO organizations (name, domain, is_verified, created_by)
+    VALUES (v_domain, v_domain, true, v_user_id)
+    ON CONFLICT (domain) DO UPDATE SET is_verified = true
+    RETURNING id INTO v_org_id;
 
-    IF NOT v_pending THEN
-      INSERT INTO pending_organizations (user_id, email, requested_domain)
-      VALUES (v_user_id, v_email, v_domain);
-    END IF;
-
-    RETURN jsonb_build_object('redirect', '/organization-request', 'matched', false);
+    INSERT INTO organization_members (user_id, organization_id, role)
+    VALUES (v_user_id, v_org_id, 'owner')
+    ON CONFLICT (user_id, organization_id) DO NOTHING;
   END IF;
+
+  RETURN jsonb_build_object('redirect', '/admin', 'organization_id', v_org_id, 'matched', true);
 END;
 $$;
 
