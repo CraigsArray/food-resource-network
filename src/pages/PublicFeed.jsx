@@ -1,14 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 
 const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
+const DARK_MAP_STYLES = [
+  { featureType: 'all', elementType: 'geometry',           stylers: [{ color: '#242f3e' }] },
+  { featureType: 'all', elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
+  { featureType: 'all', elementType: 'labels.text.fill',   stylers: [{ color: '#746855' }] },
+  { featureType: 'water', elementType: 'geometry',         stylers: [{ color: '#17263c' }] },
+]
+
 const ORG_COLORS = {
-  'Church':                             '#A855F7',
-  'Community Member':                   '#22C55E',
-  'Nonprofit':                          '#3B82F6',
-  'Feeding San Diego Access Point':     '#E91E63',
+  'Church':                           '#A855F7',
+  'Community Member':                 '#22C55E',
+  'Nonprofit':                        '#3B82F6',
+  'Feeding San Diego Access Point':   '#E91E63',
 }
 
 function orgColor(name) { return ORG_COLORS[name] ?? '#22C55E' }
@@ -36,7 +44,7 @@ function Notification({ msg, onDone }) {
     <div style={{
       position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
       background: 'var(--color-success)', color: 'white', padding: '14px 22px',
-      borderRadius: 12, fontWeight: 600, boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+      borderRadius: 12, fontWeight: 600, boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
       animation: 'slideInToast 0.3s ease-out',
     }}>
       {msg}
@@ -47,16 +55,20 @@ function Notification({ msg, onDone }) {
 
 export default function PublicFeed() {
   const { session, isAppAdmin, memberships } = useAuth()
-  const [posts, setPosts]     = useState([])
-  const [loading, setLoading] = useState(true)
+  const { theme, toggleTheme } = useTheme()
+  const [posts, setPosts]       = useState([])
+  const [loading, setLoading]   = useState(true)
   const [expanded, setExpanded] = useState(null)
   const [reactions, setReactions] = useState(() => {
     try { return JSON.parse(localStorage.getItem('feedReactions') ?? '{}') } catch { return {} }
   })
   const [toast, setToast] = useState('')
-  const mapRef    = useRef(null)
-  const mapDivRef = useRef(null)
+  const mapRef     = useRef(null)
+  const mapDivRef  = useRef(null)
   const markersRef = useRef([])
+  const themeRef   = useRef(theme)
+
+  useEffect(() => { themeRef.current = theme }, [theme])
 
   useEffect(() => {
     supabase
@@ -65,12 +77,15 @@ export default function PublicFeed() {
       .eq('is_active', true)
       .eq('status', 'published')
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setPosts(data ?? [])
-        setLoading(false)
-      })
+      .then(({ data }) => { setPosts(data ?? []); setLoading(false) })
     loadMaps()
   }, [])
+
+  // Update map style when theme toggles
+  useEffect(() => {
+    if (!mapRef.current) return
+    mapRef.current.setOptions({ styles: theme === 'dark' ? DARK_MAP_STYLES : [] })
+  }, [theme])
 
   function loadMaps() {
     if (window.google?.maps) { initMap(); return }
@@ -86,12 +101,7 @@ export default function PublicFeed() {
     mapRef.current = new window.google.maps.Map(mapDivRef.current, {
       center: { lat: 32.7157, lng: -117.1611 },
       zoom: 10,
-      styles: [
-        { featureType: 'all', elementType: 'geometry',           stylers: [{ color: '#242f3e' }] },
-        { featureType: 'all', elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
-        { featureType: 'all', elementType: 'labels.text.fill',   stylers: [{ color: '#746855' }] },
-        { featureType: 'water', elementType: 'geometry',         stylers: [{ color: '#17263c' }] },
-      ],
+      styles: themeRef.current === 'dark' ? DARK_MAP_STYLES : [],
     })
   }
 
@@ -99,9 +109,9 @@ export default function PublicFeed() {
     if (!mapRef.current || posts.length === 0) return
     markersRef.current.forEach(m => m.setMap(null))
     markersRef.current = []
-
     posts.forEach(post => {
       if (!post.latitude || !post.longitude) return
+      const color = orgColor(post.organizations?.name)
       const marker = new window.google.maps.Marker({
         position: { lat: post.latitude, lng: post.longitude },
         map: mapRef.current,
@@ -109,12 +119,12 @@ export default function PublicFeed() {
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
           scale: 9, fillOpacity: 0.9,
-          fillColor: orgColor(post.organizations?.name),
+          fillColor: color,
           strokeColor: '#fff', strokeWeight: 2,
         },
       })
       const iw = new window.google.maps.InfoWindow({
-        content: `<div style="font-family:Inter,sans-serif;max-width:230px"><b style="color:${orgColor(post.organizations?.name)}">${post.title}</b><p style="margin:4px 0;font-size:12px;color:#555">${post.organizations?.name ?? ''}</p>${post.address ? `<p style="font-size:12px;margin:0">📍 ${post.address}</p>` : ''}</div>`,
+        content: `<div style="font-family:Inter,sans-serif;max-width:230px"><b style="color:${color}">${post.title}</b><p style="margin:4px 0;font-size:12px;color:#555">${post.organizations?.name ?? ''}</p>${post.address ? `<p style="font-size:12px;margin:0">📍 ${post.address}</p>` : ''}</div>`,
       })
       marker.addListener('click', () => {
         markersRef.current.forEach(m => m.infoWindow?.close())
@@ -139,10 +149,7 @@ export default function PublicFeed() {
   function toggleExpand(id) {
     setExpanded(cur => {
       const next = cur === id ? null : id
-      if (next) {
-        const post = posts.find(p => p.id === next)
-        if (post) panTo(post)
-      }
+      if (next) { const post = posts.find(p => p.id === next); if (post) panTo(post) }
       return next
     })
   }
@@ -154,10 +161,7 @@ export default function PublicFeed() {
 
   function handleThumbsUp(postId) {
     const r = reactions[postId] ?? { thumbsUp: 0, liked: false }
-    saveReactions({
-      ...reactions,
-      [postId]: { ...r, thumbsUp: r.liked ? r.thumbsUp - 1 : r.thumbsUp + 1, liked: !r.liked },
-    })
+    saveReactions({ ...reactions, [postId]: { ...r, thumbsUp: r.liked ? r.thumbsUp - 1 : r.thumbsUp + 1, liked: !r.liked } })
   }
 
   function handleReport(postId) {
@@ -168,45 +172,71 @@ export default function PublicFeed() {
   }
 
   const isAdmin = isAppAdmin || memberships.length > 0
+  const isDark  = theme === 'dark'
 
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg-dark)', transition: 'background 200ms ease' }}>
+
       {/* Header */}
-      <div style={{ padding: '1.5rem' }}>
+      <div style={{ padding: '1.25rem 1.5rem 0' }}>
         <div className="page-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', position: 'relative', zIndex: 1 }}>
             <div>
               <h1>East County Food Network</h1>
               <p>Free food resources across San Diego County</p>
             </div>
-            <div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
               {isAdmin ? (
-                <a href="/admin" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', padding: '8px 18px', borderRadius: 20, fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
-                  Admin →
-                </a>
+                <a href="/admin" style={headerLinkStyle}>Admin →</a>
               ) : session ? (
-                <a href="/organization-request" style={{ background: 'rgba(255,255,255,0.15)', color: 'white', padding: '8px 18px', borderRadius: 20, fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none' }}>
-                  My Request
-                </a>
+                <a href="/organization-request" style={headerLinkStyle}>My Request</a>
               ) : (
-                <a href="/login" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', padding: '8px 18px', borderRadius: 20, fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
-                  Provider Login →
-                </a>
+                <a href="/login" style={headerLinkStyle}>Provider Login →</a>
               )}
+              <button
+                onClick={toggleTheme}
+                style={{
+                  background: 'rgba(255,255,255,0.18)',
+                  border: '1px solid rgba(255,255,255,0.28)',
+                  color: 'white',
+                  padding: '5px 14px',
+                  borderRadius: 20,
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  transition: 'background 150ms',
+                }}
+              >
+                {isDark ? '☀️ Light mode' : '🌙 Dark mode'}
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div style={{ padding: '0 1.5rem 2rem' }}>
+      {/* Content */}
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem' }}>
+
         {/* Map */}
         <div
           ref={mapDivRef}
-          style={{ width: '100%', height: 400, borderRadius: 16, marginBottom: '1.5rem', background: 'var(--color-bg-light)', overflow: 'hidden', boxShadow: 'var(--shadow-md)' }}
+          style={{
+            width: '100%', height: 380, borderRadius: 16, marginBottom: '2rem',
+            background: 'var(--color-bg-light)', overflow: 'hidden',
+            boxShadow: 'var(--shadow-md)',
+            border: '1px solid var(--color-border)',
+          }}
         />
 
         {/* Feed */}
-        <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <h2 style={{
+          fontFamily: 'Outfit, sans-serif', fontSize: '1.35rem', fontWeight: 700,
+          marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
+          color: 'var(--color-text-primary)',
+        }}>
           📋 Available Resources
         </h2>
 
@@ -215,7 +245,7 @@ export default function PublicFeed() {
         ) : posts.length === 0 ? (
           <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '3rem' }}>📭 No active posts yet.</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
             {posts.map(post => {
               const r = reactions[post.id] ?? {}
               const isOpen = expanded === post.id
@@ -224,19 +254,22 @@ export default function PublicFeed() {
 
               return (
                 <article key={post.id} style={{
-                  background: 'var(--color-bg-light)', border: `1px solid ${isOpen ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                  borderRadius: 16, padding: '1.25rem', transition: 'all 200ms', cursor: 'pointer',
-                  boxShadow: isOpen ? 'var(--shadow-lg)' : 'none',
+                  background: 'var(--color-bg-medium)',
+                  border: `1px solid ${isOpen ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                  borderRadius: 14, padding: '1.125rem 1.25rem',
+                  transition: 'all 180ms', cursor: 'pointer',
+                  boxShadow: isOpen ? 'var(--shadow-md)' : 'var(--shadow-sm)',
                   position: 'relative', overflow: 'hidden',
                 }}>
                   {/* Color accent bar */}
-                  <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: color, opacity: isOpen ? 1 : 0, transition: 'opacity 200ms' }} />
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: color, opacity: isOpen ? 1 : 0, transition: 'opacity 200ms', borderRadius: '14px 0 0 14px' }} />
 
-                  {/* Collapsed header — always visible */}
                   <div onClick={() => toggleExpand(post.id)}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{post.organizations?.name ?? 'Anonymous'}</span>
+                        <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text-primary)' }}>
+                          {post.organizations?.name ?? 'Anonymous'}
+                        </span>
                         <span style={{ padding: '2px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 700, background: `${color}22`, color, border: `1px solid ${color}55` }}>
                           {post.category ?? 'food'}
                         </span>
@@ -244,37 +277,33 @@ export default function PublicFeed() {
                       <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{timeAgo(post.created_at)}</span>
                     </div>
 
+                    <p style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{post.title}</p>
+
                     {post.address && (
-                      <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
+                      <p style={{ fontSize: '0.83rem', color: 'var(--color-text-secondary)' }}>
                         📍 {post.address}{post.city ? `, ${post.city}` : ''}
                       </p>
                     )}
 
-                    {/* Expanded content */}
                     {isOpen && (
-                      <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '2px solid var(--color-border)' }}>
-                        <h3 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.5rem' }}>{post.title}</h3>
+                      <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid var(--color-border)` }}>
                         {post.description && (
-                          <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.7, marginBottom: '0.75rem', fontSize: '0.93rem' }}>{post.description}</p>
+                          <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.7, marginBottom: '0.75rem', fontSize: '0.9rem' }}>{post.description}</p>
                         )}
                         {post.image_url && (
                           <img src={post.image_url} alt={post.title} style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 10, marginBottom: '0.75rem' }} loading="lazy" />
                         )}
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem' }}>
-                          {post.start_time && (
-                            <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.875rem' }}>
-                              <span style={{ color: 'var(--color-text-muted)', minWidth: 100 }}>🕐 Time:</span>
-                              <span style={{ color: 'var(--color-text-primary)' }}>
-                                {new Date(post.start_time).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                                {post.end_time ? ` – ${new Date(post.end_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : ''}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
+                        {post.start_time && (
+                          <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                            <span style={{ color: 'var(--color-text-muted)', minWidth: 80 }}>🕐 Time:</span>
+                            <span style={{ color: 'var(--color-text-primary)' }}>
+                              {new Date(post.start_time).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                              {post.end_time ? ` – ${new Date(post.end_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : ''}
+                            </span>
+                          </div>
+                        )}
                         {post.tags?.length > 0 && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginBottom: '0.75rem' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.5rem' }}>
                             {post.tags.map(t => (
                               <span key={t} style={{ padding: '3px 12px', background: 'var(--color-surface)', borderRadius: 12, fontSize: '0.75rem', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>{t}</span>
                             ))}
@@ -284,31 +313,30 @@ export default function PublicFeed() {
                     )}
                   </div>
 
-                  {/* Interaction bar — always visible */}
+                  {/* Reaction bar */}
                   <div
-                    style={{ display: 'flex', gap: '0.5rem', marginTop: '0.875rem', paddingTop: '0.875rem', borderTop: '1px solid var(--color-border)' }}
+                    style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}
                     onClick={e => e.stopPropagation()}
                   >
                     <button
                       onClick={() => handleThumbsUp(post.id)}
                       style={{
-                        padding: '5px 14px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', border: '1px solid',
-                        background: r.liked ? 'hsla(142,60%,45%,0.2)' : 'var(--color-surface)',
-                        color:      r.liked ? 'hsl(142,70%,65%)'     : 'var(--color-text-muted)',
-                        borderColor: r.liked ? 'hsla(142,60%,45%,0.5)' : 'var(--color-border)',
+                        padding: '4px 14px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', border: '1px solid',
+                        background: r.liked ? 'hsla(142,60%,45%,0.15)' : 'var(--color-surface)',
+                        color:      r.liked ? 'var(--color-success)'    : 'var(--color-text-muted)',
+                        borderColor: r.liked ? 'hsla(142,60%,45%,0.4)'  : 'var(--color-border)',
                         transition: 'all 150ms',
                       }}
                     >
-                      👍 {r.thumbsUp ? r.thumbsUp : ''}
+                      👍 {r.thumbsUp || ''}
                     </button>
-
                     <button
                       onClick={() => handleReport(post.id)}
                       style={{
-                        padding: '5px 14px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', border: '1px solid',
-                        background: r.reported ? 'hsla(0,84%,60%,0.15)' : 'var(--color-surface)',
-                        color:      r.reported ? 'hsl(0,84%,70%)'       : 'var(--color-text-muted)',
-                        borderColor: r.reported ? 'hsla(0,84%,60%,0.4)' : 'var(--color-border)',
+                        padding: '4px 14px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', border: '1px solid',
+                        background: r.reported ? 'hsla(0,84%,60%,0.12)'  : 'var(--color-surface)',
+                        color:      r.reported ? 'var(--color-error)'     : 'var(--color-text-muted)',
+                        borderColor: r.reported ? 'hsla(0,84%,60%,0.35)' : 'var(--color-border)',
                         transition: 'all 150ms',
                       }}
                       title={r.reported ? 'Reported' : 'Report this post'}
@@ -322,9 +350,9 @@ export default function PublicFeed() {
           </div>
         )}
 
-        <p style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+        <p style={{ marginTop: '2.5rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--color-text-muted)', paddingBottom: '1rem' }}>
           Are you a food provider?{' '}
-          <a href="/login" style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 600 }}>
+          <a href="/login" style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 600 }}>
             Sign in to post resources →
           </a>
         </p>
@@ -333,4 +361,15 @@ export default function PublicFeed() {
       {toast && <Notification msg={toast} onDone={() => setToast('')} />}
     </div>
   )
+}
+
+const headerLinkStyle = {
+  background: 'rgba(255,255,255,0.2)',
+  color: 'white',
+  padding: '7px 18px',
+  borderRadius: 20,
+  fontWeight: 700,
+  fontSize: '0.85rem',
+  textDecoration: 'none',
+  border: '1px solid rgba(255,255,255,0.3)',
 }
