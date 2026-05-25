@@ -267,6 +267,9 @@ export default function PublicFeed() {
             <span style={{ fontSize: '0.78rem', color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--color-text-secondary)', lineHeight: 1.3 }}>
               Aggregated food pantries &amp; distributions in East County
             </span>
+            <span style={{ fontSize: '0.72rem', color: isDark ? 'rgba(255,255,255,0.6)' : 'var(--color-text-muted)', lineHeight: 1.3 }}>
+              Maintained by the El Cajon Collaborative
+            </span>
           </div>
 
           {/* Right: nav only */}
@@ -579,18 +582,21 @@ export default function PublicFeed() {
         {/* Divider */}
         <div style={{ width: 1, height: 16, background: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)', flexShrink: 0 }} />
 
-        {/* Logo */}
+        {/* Logo + text */}
         <a
           href="https://elcajoncollaborative.org"
           target="_blank"
           rel="noopener noreferrer"
-          style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}
         >
           <img
             src="/el-cajob-collab.png"
             alt="El Cajon Collaborative"
-            style={{ height: 22, width: 'auto', objectFit: 'contain' }}
+            style={{ height: 26, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
           />
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, lineHeight: 1.25, color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+            El Cajon<br />Collaborative
+          </span>
         </a>
       </div>
     </div>
