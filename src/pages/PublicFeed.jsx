@@ -594,9 +594,6 @@ export default function PublicFeed() {
             alt="El Cajon Collaborative"
             style={{ height: 26, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
           />
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, lineHeight: 1.25, color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
-            El Cajon<br />Collaborative
-          </span>
         </a>
       </div>
     </div>
