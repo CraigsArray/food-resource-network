@@ -34,6 +34,45 @@ function timeAgo(ts) {
   return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+function dateKey(post) {
+  if (!post.start_time) return 'no-date'
+  const d = new Date(post.start_time)
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+}
+
+function dateLabel(key) {
+  if (key === 'no-date') return 'Ongoing'
+  const today    = new Date()
+  const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1)
+  const d = new Date(key.replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, day) => `${y}-${String(+m + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`))
+  const same = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+  const fmt = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  if (same(d, today))    return `Today - ${fmt}`
+  if (same(d, tomorrow)) return `Tomorrow - ${fmt}`
+  return `${d.toLocaleDateString('en-US', { weekday: 'long' })} - ${fmt}`
+}
+
+function groupPostsByDate(posts) {
+  const map = new Map()
+  const order = []
+  for (const post of posts) {
+    const k = dateKey(post)
+    if (!map.has(k)) {
+      map.set(k, [])
+      order.push(k)
+    }
+    map.get(k).push(post)
+  }
+  const today = new Date()
+  return order.map(k => {
+    const d = k !== 'no-date'
+      ? new Date(k.replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, day) => `${y}-${String(+m + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`))
+      : null
+    const isToday = d ? (d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()) : false
+    return { key: k, label: dateLabel(k), isToday, posts: map.get(k) }
+  })
+}
+
 function Notification({ msg, onDone }) {
   useEffect(() => {
     const t = setTimeout(onDone, 2800)
@@ -76,7 +115,7 @@ export default function PublicFeed() {
       .select('*, organizations(name)')
       .eq('is_active', true)
       .eq('status', 'published')
-      .order('created_at', { ascending: false })
+      .order('start_time', { ascending: true, nullsFirst: false })
       .then(({ data }) => { setPosts(data ?? []); setLoading(false) })
     loadMaps()
   }, [])
@@ -250,108 +289,138 @@ export default function PublicFeed() {
         ) : posts.length === 0 ? (
           <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '3rem' }}>📭 No active posts yet.</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-            {posts.map(post => {
-              const r = reactions[post.id] ?? {}
-              const isOpen = expanded === post.id
-              const orgName = post.organizations?.name ?? ''
-              const color = orgColor(orgName)
-
-              return (
-                <article key={post.id} style={{
-                  background: 'var(--color-bg-medium)',
-                  border: `1px solid ${isOpen ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                  borderRadius: 14, padding: '1.125rem 1.25rem',
-                  transition: 'all 180ms', cursor: 'pointer',
-                  boxShadow: isOpen ? 'var(--shadow-md)' : 'var(--shadow-sm)',
-                  position: 'relative', overflow: 'hidden',
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {groupPostsByDate(posts).map(({ key, label, isToday, posts: group }, gi) => (
+              <div key={key}>
+                {/* Date section header */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  marginTop: gi === 0 ? 0 : '1.75rem', marginBottom: '0.75rem',
                 }}>
-                  {/* Color accent bar */}
-                  <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: color, opacity: isOpen ? 1 : 0, transition: 'opacity 200ms', borderRadius: '14px 0 0 14px' }} />
+                  <span style={{
+                    fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap',
+                    color: isToday ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                    background: isToday ? 'hsla(28,95%,55%,0.1)' : 'var(--color-bg-medium)',
+                    border: `1px solid ${isToday ? 'hsla(28,95%,55%,0.35)' : 'var(--color-border)'}`,
+                    padding: '3px 14px', borderRadius: 20,
+                  }}>
+                    {label}
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+                </div>
 
-                  <div onClick={() => toggleExpand(post.id)}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text-primary)' }}>
-                          {post.organizations?.name ?? 'Anonymous'}
-                        </span>
-                        <span style={{ padding: '2px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 700, background: `${color}22`, color, border: `1px solid ${color}55` }}>
-                          {post.category ?? 'food'}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{timeAgo(post.created_at)}</span>
-                    </div>
+                {/* Posts in this group */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {group.map(post => {
+                    const r = reactions[post.id] ?? {}
+                    const isOpen = expanded === post.id
+                    const orgName = post.organizations?.name ?? ''
+                    const color = orgColor(orgName)
 
-                    <p style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{post.title}</p>
+                    return (
+                      <article key={post.id} style={{
+                        background: 'var(--color-bg-medium)',
+                        border: `1px solid ${isOpen ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                        borderRadius: 14, padding: '1.125rem 1.25rem',
+                        transition: 'all 180ms', cursor: 'pointer',
+                        boxShadow: isOpen ? 'var(--shadow-md)' : 'var(--shadow-sm)',
+                        position: 'relative', overflow: 'hidden',
+                      }}>
+                        {/* Color accent bar */}
+                        <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: color, opacity: isOpen ? 1 : 0, transition: 'opacity 200ms', borderRadius: '14px 0 0 14px' }} />
 
-                    {post.address && (
-                      <p style={{ fontSize: '0.83rem', color: 'var(--color-text-secondary)' }}>
-                        📍 {post.address}{post.city ? `, ${post.city}` : ''}
-                      </p>
-                    )}
+                        <div onClick={() => toggleExpand(post.id)}>
 
-                    {isOpen && (
-                      <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid var(--color-border)` }}>
-                        {post.description && (
-                          <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.7, marginBottom: '0.75rem', fontSize: '0.9rem' }}>{post.description}</p>
-                        )}
-                        {post.image_url && (
-                          <img src={post.image_url} alt={post.title} style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 10, marginBottom: '0.75rem' }} loading="lazy" />
-                        )}
-                        {post.start_time && (
-                          <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                            <span style={{ color: 'var(--color-text-muted)', minWidth: 80 }}>🕐 Time:</span>
-                            <span style={{ color: 'var(--color-text-primary)' }}>
-                              {new Date(post.start_time).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                          {/* Title — large, first */}
+                          <p style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--color-text-primary)', marginBottom: '0.3rem', lineHeight: 1.3 }}>
+                            {post.title}
+                          </p>
+
+                          {/* Date/time — prominent, below title */}
+                          {post.start_time && (
+                            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-primary)', marginBottom: '0.4rem' }}>
+                              🕐 {new Date(post.start_time).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}
                               {post.end_time ? ` – ${new Date(post.end_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : ''}
+                            </p>
+                          )}
+
+                          {/* Provider + category + time ago */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: post.address ? '0.3rem' : 0 }}>
+                            <span style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--color-text-secondary)' }}>
+                              {orgName || 'Anonymous'}
+                            </span>
+                            <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: '0.68rem', fontWeight: 700, background: `${color}22`, color, border: `1px solid ${color}44` }}>
+                              {post.category ?? 'food'}
+                            </span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>
+                              {timeAgo(post.created_at)}
                             </span>
                           </div>
-                        )}
-                        {post.tags?.length > 0 && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.5rem' }}>
-                            {post.tags.map(t => (
-                              <span key={t} style={{ padding: '3px 12px', background: 'var(--color-surface)', borderRadius: 12, fontSize: '0.75rem', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>{t}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Reaction bar */}
-                  <div
-                    style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={() => handleThumbsUp(post.id)}
-                      style={{
-                        padding: '4px 14px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', border: '1px solid',
-                        background: r.liked ? 'hsla(142,60%,45%,0.15)' : 'var(--color-surface)',
-                        color:      r.liked ? 'var(--color-success)'    : 'var(--color-text-muted)',
-                        borderColor: r.liked ? 'hsla(142,60%,45%,0.4)'  : 'var(--color-border)',
-                        transition: 'all 150ms',
-                      }}
-                    >
-                      👍 {r.thumbsUp || ''}
-                    </button>
-                    <button
-                      onClick={() => handleReport(post.id)}
-                      style={{
-                        padding: '4px 14px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', border: '1px solid',
-                        background: r.reported ? 'hsla(0,84%,60%,0.12)'  : 'var(--color-surface)',
-                        color:      r.reported ? 'var(--color-error)'     : 'var(--color-text-muted)',
-                        borderColor: r.reported ? 'hsla(0,84%,60%,0.35)' : 'var(--color-border)',
-                        transition: 'all 150ms',
-                      }}
-                      title={r.reported ? 'Reported' : 'Report this post'}
-                    >
-                      {r.reported ? '⚠️ Reported' : '!'}
-                    </button>
-                  </div>
-                </article>
-              )
-            })}
+                          {/* Address */}
+                          {post.address && (
+                            <p style={{ fontSize: '0.83rem', color: 'var(--color-text-secondary)' }}>
+                              📍 {post.address}{post.city ? `, ${post.city}` : ''}
+                            </p>
+                          )}
+
+                          {/* Expanded content */}
+                          {isOpen && (
+                            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid var(--color-border)` }}>
+                              {post.description && (
+                                <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.7, marginBottom: '0.75rem', fontSize: '0.9rem' }}>{post.description}</p>
+                              )}
+                              {post.image_url && (
+                                <img src={post.image_url} alt={post.title} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 10, marginBottom: '0.75rem' }} loading="lazy" />
+                              )}
+                              {post.tags?.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.5rem' }}>
+                                  {post.tags.map(t => (
+                                    <span key={t} style={{ padding: '3px 12px', background: 'var(--color-surface)', borderRadius: 12, fontSize: '0.75rem', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>{t}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Reaction bar */}
+                        <div
+                          style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => handleThumbsUp(post.id)}
+                            style={{
+                              padding: '4px 14px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', border: '1px solid',
+                              background:  r.liked ? 'hsla(142,60%,45%,0.15)' : 'var(--color-surface)',
+                              color:       r.liked ? 'var(--color-success)'    : 'var(--color-text-muted)',
+                              borderColor: r.liked ? 'hsla(142,60%,45%,0.4)'  : 'var(--color-border)',
+                              transition: 'all 150ms',
+                            }}
+                          >
+                            👍 {r.thumbsUp || ''}
+                          </button>
+                          <button
+                            onClick={() => handleReport(post.id)}
+                            style={{
+                              padding: '4px 14px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', border: '1px solid',
+                              background:  r.reported ? 'hsla(0,84%,60%,0.12)'  : 'var(--color-surface)',
+                              color:       r.reported ? 'var(--color-error)'     : 'var(--color-text-muted)',
+                              borderColor: r.reported ? 'hsla(0,84%,60%,0.35)'  : 'var(--color-border)',
+                              transition: 'all 150ms',
+                            }}
+                            title={r.reported ? 'Reported' : 'Report this post'}
+                          >
+                            {r.reported ? '⚠️ Reported' : '!'}
+                          </button>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 

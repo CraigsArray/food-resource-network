@@ -191,12 +191,32 @@ CREATE POLICY "pending_orgs_update_own" ON pending_organizations
 CREATE POLICY "pending_orgs_update_admin" ON pending_organizations
   FOR UPDATE USING (is_app_admin()) WITH CHECK (is_app_admin());
 
--- organizations: public read; writes via RPCs or direct admin SQL
-DROP POLICY IF EXISTS "organizations_select" ON organizations;
+-- organizations: public read; org owners/admins can update their own; app admins can do all
+DROP POLICY IF EXISTS "organizations_select"    ON organizations;
 DROP POLICY IF EXISTS "organizations_all_admin" ON organizations;
+DROP POLICY IF EXISTS "org_owner_update"        ON organizations;
 
 CREATE POLICY "organizations_select" ON organizations
   FOR SELECT USING (true);
+
+CREATE POLICY "org_owner_update" ON organizations
+  FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_members
+      WHERE organization_id = organizations.id
+        AND user_id = auth.uid()
+        AND role IN ('owner', 'admin')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM organization_members
+      WHERE organization_id = organizations.id
+        AND user_id = auth.uid()
+        AND role IN ('owner', 'admin')
+    )
+  );
 
 CREATE POLICY "organizations_all_admin" ON organizations
   FOR ALL USING (is_app_admin()) WITH CHECK (is_app_admin());

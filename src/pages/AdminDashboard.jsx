@@ -87,13 +87,21 @@ export default function AdminDashboard() {
       setLogoPreview(publicUrl)
     }
 
-    const { error: err } = await supabase.from('organizations')
-      .update({ name: orgForm.name, website: orgForm.website, phone: orgForm.phone, email: orgForm.email, logo_url })
+    const updates = { name: orgForm.name, website: orgForm.website, phone: orgForm.phone, email: orgForm.email, logo_url }
+    const { error: err, count } = await supabase.from('organizations')
+      .update(updates, { count: 'exact' })
       .eq('id', primaryOrgId)
 
     setOrgSaving(false)
-    if (err) setOrgError(err.message)
-    else { setOrgSuccess(true); loadOrgData(primaryOrgId) }
+    if (err) {
+      setOrgError(err.message)
+    } else if (count === 0) {
+      setOrgError('Save failed — the database policy needs updating. Run the SQL snippet below in your Supabase SQL Editor.')
+    } else {
+      setOrgForm(f => ({ ...f, logo_url }))
+      setOrgData(prev => ({ ...prev, ...updates }))
+      setOrgSuccess(true)
+    }
   }
 
   // ── Posts ─────────────────────────────────────────────────
