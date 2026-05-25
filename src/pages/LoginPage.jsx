@@ -12,14 +12,12 @@ export default function LoginPage() {
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
-  const [notice, setNotice]   = useState('')
 
   if (session) return <Navigate to="/admin" replace />
 
   function reset(nextMode) {
     setMode(nextMode)
     setError('')
-    setNotice('')
     setPassword('')
     setConfirm('')
   }
@@ -69,15 +67,23 @@ export default function LoginPage() {
     const { error: authError } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     })
-    setLoading(false)
 
     if (authError) {
       setError(authError.message)
-    } else {
-      setNotice(`Confirmation email sent to ${email}. Click the link to activate your account.`)
+      setLoading(false)
+      return
     }
+
+    const { data, error: rpcError } = await supabase.rpc('handle_auth_callback')
+    setLoading(false)
+
+    if (rpcError) {
+      setError('Account created, but failed to load your organization. Try signing in.')
+      return
+    }
+
+    window.location.href = data?.redirect ?? '/organization-request'
   }
 
   async function handleForgot(e) {
@@ -132,16 +138,7 @@ export default function LoginPage() {
             {titles[mode]}
           </h2>
 
-          {notice ? (
-            <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📬</div>
-              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>{notice}</p>
-              <button className="btn-secondary" style={{ marginTop: '1.5rem', width: '100%', justifyContent: 'center' }} onClick={() => reset('signin')}>
-                Back to sign in
-              </button>
-            </div>
-          ) : (
-            <form
+          <form
               onSubmit={mode === 'signin' ? handleSignIn : mode === 'signup' ? handleSignUp : handleForgot}
               style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
             >
@@ -213,7 +210,6 @@ export default function LoginPage() {
                 )}
               </div>
             </form>
-          )}
         </div>
 
         <p style={{ textAlign: 'center', marginTop: '1.75rem', fontSize: '0.85rem' }}>
