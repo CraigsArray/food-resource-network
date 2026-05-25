@@ -47,9 +47,11 @@ CREATE TABLE IF NOT EXISTS posts (
   image_url       text,
   status          text             NOT NULL DEFAULT 'published'
                                    CHECK (status IN ('draft', 'pending_review', 'published', 'archived')),
-  is_active       boolean          NOT NULL DEFAULT true,
-  expires_at      timestamptz,
-  created_at      timestamptz      NOT NULL DEFAULT timezone('utc', now())
+  is_active        boolean          NOT NULL DEFAULT true,
+  is_recurring     boolean          NOT NULL DEFAULT false,
+  recurrence_rule  text,
+  expires_at       timestamptz,
+  created_at       timestamptz      NOT NULL DEFAULT timezone('utc', now())
 );
 
 CREATE TABLE IF NOT EXISTS post_occurrences (
