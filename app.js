@@ -38,7 +38,7 @@ class Post {
 
         return 'Walk-in';
     }
-    //
+
     extractFoodAvailability(details, tags) {
         if (!details && (!tags || tags.length === 0)) return 'Various items available';
 
@@ -46,7 +46,6 @@ class Post {
         const lower = (details || '').toLowerCase();
         const tagStr = (tags || []).join(' ').toLowerCase();
 
-        // Check tags and details for food types
         if (tagStr.includes('produce') || lower.includes('produce') || lower.includes('fruits') || lower.includes('veg')) {
             items.push('Fresh produce');
         }
@@ -254,89 +253,71 @@ const SEED_POSTS = [
     }
 ];
 
-// ===== STATE MANAGEMENT =====
+// ===== STATE =====
 let posts = [];
+let reactions = {}; // { [postId]: { thumbsUp: number, userLiked: boolean, reported: boolean } }
 let map;
 let markers = [];
 let geocoder;
 
+// True when the admin form is present in the DOM
+const isAdminPage = !!document.getElementById('createPostForm');
+
 // ===== GOOGLE MAPS INITIALIZATION =====
 function initMap() {
-    // Center on San Diego
     const sanDiego = { lat: 32.7157, lng: -117.1611 };
 
     map = new google.maps.Map(document.getElementById('map'), {
         center: sanDiego,
         zoom: 11,
         styles: [
-            {
-                featureType: 'all',
-                elementType: 'geometry',
-                stylers: [{ color: '#242f3e' }]
-            },
-            {
-                featureType: 'all',
-                elementType: 'labels.text.stroke',
-                stylers: [{ color: '#242f3e' }]
-            },
-            {
-                featureType: 'all',
-                elementType: 'labels.text.fill',
-                stylers: [{ color: '#746855' }]
-            },
-            {
-                featureType: 'water',
-                elementType: 'geometry',
-                stylers: [{ color: '#17263c' }]
-            }
+            { featureType: 'all', elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
+            { featureType: 'all', elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
+            { featureType: 'all', elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+            { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] }
         ]
     });
 
     geocoder = new google.maps.Geocoder();
 
-    // Initialize after map is ready
     loadPosts();
+    loadReactions();
     renderFeed();
     updateMapMarkers();
     attachEventListeners();
 }
 
-// Make initMap available globally for the callback
 window.initMap = initMap;
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
-    // Always load posts and attach listeners even if map fails
     loadPosts();
+    loadReactions();
     renderFeed();
     attachEventListeners();
 
-    // Show loading message
     const mapContainer = document.getElementById('map');
     if (mapContainer && !map) {
-        mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--color-text-muted);">Loading map...</div>';
+        mapContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--color-text-muted);">Loading map...</div>';
     }
 
-    // Fallback: if Google Maps doesn't load in 3 seconds, continue anyway
     setTimeout(() => {
         if (!map) {
-            console.warn('Google Maps did not load - continuing without map');
             const mapContainer = document.getElementById('map');
             if (mapContainer) {
-                mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--color-text-muted); background: var(--color-bg-light); padding: 20px; text-align: center;">⚠️ Map failed to load (ad blocker or API key issue)<br><br>Posts will still work without the map!</div>';
+                mapContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--color-text-muted);background:var(--color-bg-light);padding:20px;text-align:center;">⚠️ Map failed to load (ad blocker or API key issue)<br><br>Posts will still work without the map!</div>';
             }
         }
     }, 3000);
 });
 
+// ===== PERSISTENCE =====
 function loadPosts() {
     const savedPosts = localStorage.getItem('foodResourcePosts');
     if (savedPosts) {
         try {
-            const parsed = JSON.parse(savedPosts);
-            posts = parsed.map(p => new Post(p));
+            posts = JSON.parse(savedPosts).map(p => new Post(p));
         } catch (e) {
-            console.error('Error loading saved posts:', e);
             posts = SEED_POSTS.map(p => new Post(p));
         }
     } else {
@@ -352,15 +333,30 @@ function savePosts() {
     }
 }
 
+function loadReactions() {
+    try {
+        const saved = localStorage.getItem('foodResourceReactions');
+        reactions = saved ? JSON.parse(saved) : {};
+    } catch (e) {
+        reactions = {};
+    }
+}
+
+function saveReactions() {
+    try {
+        localStorage.setItem('foodResourceReactions', JSON.stringify(reactions));
+    } catch (e) {
+        console.error('Error saving reactions:', e);
+    }
+}
+
 // ===== MAP FUNCTIONS =====
 function updateMapMarkers() {
     if (!map) return;
 
-    // Clear existing markers
     markers.forEach(marker => marker.setMap(null));
     markers = [];
 
-    // Add markers for posts with coordinates
     posts.forEach(post => {
         if (post.lat && post.lng) {
             const marker = new google.maps.Marker({
@@ -377,16 +373,12 @@ function updateMapMarkers() {
                 }
             });
 
-            // Info window
             const infoWindow = new google.maps.InfoWindow({
                 content: createMapInfoWindow(post)
             });
 
             marker.addListener('click', () => {
-                // Close other info windows
-                markers.forEach(m => {
-                    if (m.infoWindow) m.infoWindow.close();
-                });
+                markers.forEach(m => { if (m.infoWindow) m.infoWindow.close(); });
                 infoWindow.open(map, marker);
             });
 
@@ -398,11 +390,11 @@ function updateMapMarkers() {
 
 function createMapInfoWindow(post) {
     return `
-        <div style="font-family: Inter, sans-serif; max-width: 250px;">
-            <h3 style="margin: 0 0 8px 0; font-size: 16px; color: ${getOrgColor(post.orgType)};">${escapeHtml(post.title)}</h3>
-            <p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>${escapeHtml(post.orgType)}</strong></p>
-            ${post.neighborhood ? `<p style="margin: 4px 0; font-size: 12px;">📍 ${escapeHtml(post.neighborhood)}</p>` : ''}
-            ${post.tags.length > 0 ? `<p style="margin: 4px 0; font-size: 11px; color: #888;">${post.tags.map(t => '#' + t).join(' ')}</p>` : ''}
+        <div style="font-family:Inter,sans-serif;max-width:250px;">
+            <h3 style="margin:0 0 8px 0;font-size:16px;color:${getOrgColor(post.orgType)};">${escapeHtml(post.title)}</h3>
+            <p style="margin:4px 0;font-size:12px;color:#666;"><strong>${escapeHtml(post.orgType)}</strong></p>
+            ${post.neighborhood ? `<p style="margin:4px 0;font-size:12px;">📍 ${escapeHtml(post.neighborhood)}</p>` : ''}
+            ${post.tags.length > 0 ? `<p style="margin:4px 0;font-size:11px;color:#888;">${post.tags.map(t => '#' + t).join(' ')}</p>` : ''}
         </div>
     `;
 }
@@ -424,12 +416,8 @@ async function geocodeAddress(address) {
         geocoder.geocode({ address: address + ', San Diego, CA' }, (results, status) => {
             if (status === 'OK' && results[0]) {
                 const location = results[0].geometry.location;
-                resolve({
-                    lat: location.lat(),
-                    lng: location.lng()
-                });
+                resolve({ lat: location.lat(), lng: location.lng() });
             } else {
-                console.log('Geocode failed:', status);
                 resolve(null);
             }
         });
@@ -438,7 +426,6 @@ async function geocodeAddress(address) {
 
 function panMapToLocation(lat, lng) {
     if (!map) return;
-
     map.panTo({ lat, lng });
     map.setZoom(15);
 }
@@ -450,8 +437,8 @@ function renderFeed() {
 
     if (sortedPosts.length === 0) {
         feedContainer.innerHTML = `
-            <div style="text-align: center; padding: 3rem; color: var(--color-text-muted);">
-                <p style="font-size: 1.2rem; margin-bottom: 0.5rem;">📭 No posts found</p>
+            <div style="text-align:center;padding:3rem;color:var(--color-text-muted);">
+                <p style="font-size:1.2rem;margin-bottom:0.5rem;">📭 No posts found</p>
                 <p>Create a new post to get started!</p>
             </div>
         `;
@@ -465,6 +452,7 @@ function createPostCard(post) {
     const timeLabel = getTimeLabel(post.createdAt);
     const orgClass = getOrgClass(post.orgType);
     const primaryTag = post.tags.length > 0 ? post.tags[0] : null;
+    const r = reactions[post.id] || { thumbsUp: 0, userLiked: false, reported: false };
 
     return `
         <article class="post-card" data-post-id="${post.id}">
@@ -476,23 +464,23 @@ function createPostCard(post) {
                     </div>
                     <span class="time-label">${timeLabel}</span>
                 </div>
-                
-                <div class="location-summary" style="margin-bottom: var(--spacing-sm);">
+
+                <div class="location-summary" style="margin-bottom:var(--spacing-sm);">
                     ${post.neighborhood ? `<span class="primary-neighborhood">📍 ${escapeHtml(post.neighborhood)}</span>` : ''}
-                    ${post.address ? `<div style="font-size: 0.85rem; color: var(--color-text-secondary); margin-top: 6px;">${escapeHtml(post.address)}</div>` : ''}
+                    ${post.address ? `<div style="font-size:0.85rem;color:var(--color-text-secondary);margin-top:6px;">${escapeHtml(post.address)}</div>` : ''}
                 </div>
-                
-                <div class="toggle-details" style="display: none;">
-                    <div class="post-preview" style="margin-top: 12px; margin-bottom: 8px;">
+
+                <div class="toggle-details" style="display:none;">
+                    <div class="post-preview" style="margin-top:12px;margin-bottom:8px;">
                         ${primaryTag ? `<span class="primary-tag">🏷️ ${escapeHtml(primaryTag)}</span>` : ''}
                     </div>
-                    
+
                     <h3 class="post-title">${escapeHtml(post.title)}</h3>
-                    <p class="post-details" style="display: block;">${escapeHtml(post.details)}</p>
-                    
+                    <p class="post-details" style="display:block;">${escapeHtml(post.details)}</p>
+
                     ${post.imageUrl ? `<img src="${escapeHtml(post.imageUrl)}" alt="${escapeHtml(post.title)}" class="post-image" loading="lazy">` : ''}
-                    
-                    <div class="expanded-details" style="display: block; margin-top: 16px; padding-top: 16px; border-top: 2px solid var(--color-border);">
+
+                    <div class="expanded-details" style="display:block;margin-top:16px;padding-top:16px;border-top:2px solid var(--color-border);">
                         <div class="detail-row">
                             <span class="detail-label">📍 Pickup Name:</span>
                             <span class="detail-value">${escapeHtml(post.locationName || 'Contact for location')}</span>
@@ -511,20 +499,31 @@ function createPostCard(post) {
                                 <span class="detail-value">${escapeHtml(post.contact)}</span>
                             </div>
                         ` : ''}
-                        
+
                         ${post.tags.length > 0 ? `
-                            <div class="tags-container" style="margin-top: 12px;">
+                            <div class="tags-container" style="margin-top:12px;">
                                 ${post.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
                             </div>
                         ` : ''}
-                        
-                        <div class="post-actions" style="margin-top: 12px;">
-                            <button class="action-btn copy-btn" data-details="${escapeHtml(post.details)}">
-                                📋 Copy directions
-                            </button>
-                        </div>
+
+                        ${isAdminPage ? `
+                            <div class="post-actions" style="margin-top:12px;">
+                                <button class="action-btn copy-btn" data-details="${escapeHtml(post.details)}">
+                                    📋 Copy directions
+                                </button>
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
+            </div>
+
+            <div class="post-interactions">
+                <button class="reaction-btn thumbsup-btn ${r.userLiked ? 'active' : ''}" data-post-id="${post.id}" title="This helped!">
+                    👍 <span class="reaction-count">${r.thumbsUp}</span>
+                </button>
+                <button class="reaction-btn report-btn ${r.reported ? 'reported' : ''}" data-post-id="${post.id}" title="${r.reported ? 'Reported' : 'Report this post'}">
+                    ${r.reported ? '⚠️ Reported' : '!'}
+                </button>
             </div>
         </article>
     `;
@@ -554,8 +553,7 @@ function getTimeLabel(timestamp) {
     if (days === 1) return 'Yesterday';
     if (days < 7) return `${days} days ago`;
 
-    const date = new Date(timestamp);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 // ===== SORTING =====
@@ -563,58 +561,54 @@ function sortPosts(postsToSort) {
     return postsToSort.sort((a, b) => b.createdAt - a.createdAt);
 }
 
+// ===== EVENT LISTENERS =====
 let listenersAttached = false;
 function attachEventListeners() {
     if (listenersAttached) return;
-
-    // Form submission
-    const form = document.getElementById('createPostForm');
-    if (!form) return; // Wait for DOM to be ready
-
     listenersAttached = true;
-    form.addEventListener('submit', handleFormSubmit);
 
-    // Clear button
-    const clearBtn = document.getElementById('clearBtn');
-    clearBtn.addEventListener('click', clearForm);
+    // Admin-only: form listeners
+    if (isAdminPage) {
+        const form = document.getElementById('createPostForm');
+        form.addEventListener('submit', handleFormSubmit);
 
-    // Mobile toggle
-    const mobileToggleBtn = document.getElementById('mobileToggleBtn');
-    const formWrapper = document.getElementById('formWrapper');
-    const closeBtnMobile = document.getElementById('closeBtnMobile');
+        document.getElementById('clearBtn').addEventListener('click', clearForm);
+    }
 
-    mobileToggleBtn.addEventListener('click', () => {
-        formWrapper.classList.add('active');
-    });
-
-    closeBtnMobile.addEventListener('click', () => {
-        formWrapper.classList.remove('active');
-    });
-
-    // Delegate events for dynamic content
+    // Both pages: feed interaction
     document.getElementById('feedContainer').addEventListener('click', handleFeedClick);
 }
 
 function handleFeedClick(e) {
-    // Copy button
-    if (e.target.closest('.copy-btn')) {
-        e.stopPropagation();
-        const btn = e.target.closest('.copy-btn');
-        const details = btn.getAttribute('data-details');
-        copyToClipboard(details);
+    // Thumbs up
+    if (e.target.closest('.thumbsup-btn')) {
+        const btn = e.target.closest('.thumbsup-btn');
+        handleThumbsUp(btn.dataset.postId);
         return;
     }
 
-    // Post card click to expand and zoom map
+    // Report
+    if (e.target.closest('.report-btn')) {
+        const btn = e.target.closest('.report-btn');
+        handleReport(btn.dataset.postId);
+        return;
+    }
+
+    // Copy directions (admin only)
+    if (e.target.closest('.copy-btn')) {
+        const btn = e.target.closest('.copy-btn');
+        copyToClipboard(btn.getAttribute('data-details'));
+        return;
+    }
+
+    // Expand / collapse post card
     const postCard = e.target.closest('.post-card');
     if (postCard) {
         const toggleDetails = postCard.querySelector('.toggle-details');
-        
         if (toggleDetails) {
             const isExpanded = toggleDetails.style.display === 'block';
             toggleDetails.style.display = isExpanded ? 'none' : 'block';
 
-            // Pan map if expanding
             if (!isExpanded) {
                 const postId = postCard.getAttribute('data-post-id');
                 const post = posts.find(p => p.id === postId);
@@ -624,51 +618,92 @@ function handleFeedClick(e) {
                 }
             }
         }
-        return;
     }
 }
 
+// ===== REACTION HANDLERS =====
+function handleThumbsUp(postId) {
+    if (!reactions[postId]) {
+        reactions[postId] = { thumbsUp: 0, userLiked: false, reported: false };
+    }
 
+    const r = reactions[postId];
+    if (r.userLiked) {
+        r.thumbsUp = Math.max(0, r.thumbsUp - 1);
+        r.userLiked = false;
+    } else {
+        r.thumbsUp += 1;
+        r.userLiked = true;
+    }
 
+    saveReactions();
+    updateReactionButtons(postId);
+}
+
+function handleReport(postId) {
+    if (!reactions[postId]) {
+        reactions[postId] = { thumbsUp: 0, userLiked: false, reported: false };
+    }
+
+    const r = reactions[postId];
+    r.reported = !r.reported;
+
+    saveReactions();
+    updateReactionButtons(postId);
+
+    if (r.reported) {
+        showNotification('⚠️ Post reported. Thank you for the feedback.');
+    }
+}
+
+function updateReactionButtons(postId) {
+    const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
+    if (!card) return;
+
+    const r = reactions[postId] || { thumbsUp: 0, userLiked: false, reported: false };
+
+    const thumbsBtn = card.querySelector('.thumbsup-btn');
+    if (thumbsBtn) {
+        thumbsBtn.className = `reaction-btn thumbsup-btn${r.userLiked ? ' active' : ''}`;
+        thumbsBtn.querySelector('.reaction-count').textContent = r.thumbsUp;
+    }
+
+    const reportBtn = card.querySelector('.report-btn');
+    if (reportBtn) {
+        reportBtn.className = `reaction-btn report-btn${r.reported ? ' reported' : ''}`;
+        reportBtn.textContent = r.reported ? '⚠️ Reported' : '!';
+    }
+}
+
+// ===== UTILITIES =====
 async function copyToClipboard(text) {
     try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             await navigator.clipboard.writeText(text);
-            showNotification('✅ Directions copied to clipboard!');
         } else {
-            // Fallback for older browsers
             const textarea = document.createElement('textarea');
             textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
+            textarea.style.cssText = 'position:fixed;opacity:0;';
             document.body.appendChild(textarea);
             textarea.select();
             document.execCommand('copy');
             document.body.removeChild(textarea);
-            showNotification('✅ Directions copied to clipboard!');
         }
+        showNotification('✅ Directions copied to clipboard!');
     } catch (err) {
-        console.error('Failed to copy:', err);
         showNotification('❌ Failed to copy. Please copy manually.');
     }
 }
 
 function showNotification(message) {
-    // Create temporary notification
     const notification = document.createElement('div');
     notification.textContent = message;
     notification.style.cssText = `
-        position: fixed;
-        bottom: 30px;
-        right: 30px;
-        background: var(--color-success);
-        color: white;
-        padding: 16px 24px;
-        border-radius: 12px;
-        font-weight: 600;
-        box-shadow: var(--shadow-lg);
-        z-index: 10000;
-        animation: slideIn 0.3s ease-out;
+        position:fixed;bottom:30px;right:30px;
+        background:var(--color-success);color:white;
+        padding:16px 24px;border-radius:12px;
+        font-weight:600;box-shadow:var(--shadow-lg);
+        z-index:10000;animation:slideIn 0.3s ease-out;
     `;
     document.body.appendChild(notification);
 
@@ -678,14 +713,17 @@ function showNotification(message) {
     }, 2500);
 }
 
-// ===== FORM HANDLING =====
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ===== FORM HANDLING (admin page only) =====
 async function handleFormSubmit(e) {
     e.preventDefault();
-
-    // Clear previous errors
     clearErrors();
 
-    // Get form values
     const formData = {
         author: document.getElementById('authorName').value.trim(),
         orgType: document.getElementById('orgType').value,
@@ -701,12 +739,8 @@ async function handleFormSubmit(e) {
         foodAvailability: ''
     };
 
-    // Validate
-    if (!validateForm(formData)) {
-        return;
-    }
+    if (!validateForm(formData)) return;
 
-    // Try to geocode address if provided
     if (formData.address) {
         showNotification('🌍 Geocoding address...');
         const coords = await geocodeAddress(formData.address);
@@ -716,38 +750,25 @@ async function handleFormSubmit(e) {
         }
     }
 
-    // Create new post
     const newPost = new Post(formData);
-    posts.unshift(newPost); // Add to beginning
+    posts.unshift(newPost);
 
-    // Save and render
     savePosts();
     renderFeed();
     updateMapMarkers();
 
-    // Scroll to top of feed
     document.getElementById('feedContainer').scrollTop = 0;
-
-    // Clear form
     clearForm();
-
-    // Close mobile form if open
-    document.getElementById('formWrapper').classList.remove('active');
-
-    // Show success message
     showNotification('✅ Post created successfully!');
 }
 
 function validateForm(data) {
     let isValid = true;
 
-    // Title required
     if (!data.title) {
         showError('titleError', 'Title is required');
         isValid = false;
     }
-
-    // Details required
     if (!data.details) {
         showError('detailsError', 'Details are required');
         isValid = false;
@@ -757,15 +778,12 @@ function validateForm(data) {
 }
 
 function showError(elementId, message) {
-    const errorElement = document.getElementById(elementId);
-    if (errorElement) {
-        errorElement.textContent = message;
-    }
+    const el = document.getElementById(elementId);
+    if (el) el.textContent = message;
 }
 
 function clearErrors() {
-    const errorElements = document.querySelectorAll('.error-message');
-    errorElements.forEach(el => el.textContent = '');
+    document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 }
 
 function clearForm() {
@@ -774,36 +792,16 @@ function clearForm() {
     clearErrors();
 }
 
-// ===== UTILITIES =====
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Add CSS animations dynamically
+// ===== ANIMATIONS =====
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
+        from { transform: translateX(100%); opacity: 0; }
+        to   { transform: translateX(0);    opacity: 1; }
     }
-    
     @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
+        from { transform: translateX(0);    opacity: 1; }
+        to   { transform: translateX(100%); opacity: 0; }
     }
 `;
 document.head.appendChild(style);

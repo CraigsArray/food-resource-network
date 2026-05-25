@@ -818,3 +818,154 @@ body {
 .post-card {
     animation: fadeIn var(--transition-base);
 }
+
+/* ===== CUSTOMER PAGE LAYOUT ===== */
+.customer-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+.customer-main .map-container {
+    height: 420px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    background: var(--color-bg-light);
+}
+
+.customer-main .feed-section {
+    background: var(--color-bg-medium);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+}
+
+.customer-main .feed-container {
+    max-height: none;
+}
+
+/* ===== ADMIN PAGE LAYOUT ===== */
+.admin-header {
+    background: linear-gradient(135deg, hsl(220, 60%, 40%) 0%, hsl(260, 60%, 45%) 100%);
+}
+
+.back-to-public {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: background var(--transition-fast);
+}
+
+.back-to-public:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.admin-form-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+/* Override mobile drawer behaviour — form is always visible on admin page */
+.admin-form-section .form-wrapper {
+    position: static !important;
+    transform: none !important;
+    border-radius: var(--radius-lg) !important;
+    max-height: none !important;
+    box-shadow: var(--shadow-md);
+}
+
+.admin-map-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.admin-map-section .admin-map {
+    height: 420px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    background: var(--color-bg-light);
+}
+
+.admin-feed-section {
+    background: var(--color-bg-medium);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.admin-feed-container {
+    max-height: none;
+}
+
+/* ===== REACTION BUTTONS (thumbs up / report) ===== */
+.post-interactions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--color-border);
+}
+
+.reaction-btn {
+    padding: 6px 14px;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.reaction-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-text-primary);
+}
+
+.thumbsup-btn.active {
+    background: hsla(142, 60%, 45%, 0.2);
+    color: hsl(142, 70%, 65%);
+    border-color: hsla(142, 60%, 45%, 0.5);
+}
+
+.report-btn:hover {
+    border-color: var(--color-error);
+    color: var(--color-error);
+}
+
+.report-btn.reported {
+    background: hsla(0, 84%, 60%, 0.15);
+    color: hsl(0, 84%, 70%);
+    border-color: hsla(0, 84%, 60%, 0.4);
+    cursor: default;
+}
+
+/* ===== SITE FOOTER ===== */
+.site-footer {
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    text-align: center;
+}
+
+.admin-link {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: color var(--transition-fast);
+}
+
+.admin-link:hover {
+    color: var(--color-primary);
+}

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin — East County Food Network</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script>
+      window.initMap = function() {
+        window.dispatchEvent(new Event('google-maps-loaded'));
+      };
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyATKV3W2gaC31gaDZvAd3M9rmNZk9eapxI&callback=initMap" async defer></script>
+  </head>
+  <body>
+    <div class="app-container">
+      <header class="header admin-header">
+        <div class="header-content">
+          <div class="header-top">
+            <h1 class="header-title">Admin Panel</h1>
+            <a href="index.html" class="back-to-public">← Public View</a>
+          </div>
+          <p class="header-tagline">Create and manage food resource posts</p>
+        </div>
+      </header>
+
+      <!-- Form: first, full width -->
+      <section class="admin-form-section">
+        <div class="form-wrapper" id="formWrapper">
+          <div class="form-header">
+            <h2 class="form-title"><span class="form-icon">✏️</span> New Resource Post</h2>
+          </div>
+          <form class="create-post-form" id="createPostForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="authorName">Your Name / Org Name</label>
+                <input type="text" id="authorName" placeholder="e.g. Maria L. or City Heights Pantry" value="Community Helper">
+              </div>
+              <div class="form-group">
+                <label for="orgType">Organization Type</label>
+                <select id="orgType">
+                  <option value="Community Member">Community Member</option>
+                  <option value="Church">Church</option>
+                  <option value="Nonprofit">Nonprofit</option>
+                  <option value="Feeding San Diego Access Point">Feeding San Diego Access Point</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="postTitle">Title <span class="required">*</span></label>
+              <input type="text" id="postTitle" placeholder="e.g. Extra produce + pantry items (North Park)">
+              <span class="error-message" id="titleError"></span>
+            </div>
+
+            <div class="form-group">
+              <label for="postDetails">Details <span class="required">*</span></label>
+              <textarea id="postDetails" placeholder="What's available, pickup times, and any instructions for the community..."></textarea>
+              <span class="error-message" id="detailsError"></span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="neighborhood">Neighborhood</label>
+                <select id="neighborhood">
+                  <option value="">Select neighborhood...</option>
+                  <option value="Barrio Logan">Barrio Logan</option>
+                  <option value="City Heights">City Heights</option>
+                  <option value="Clairemont">Clairemont</option>
+                  <option value="Chula Vista">Chula Vista</option>
+                  <option value="Encanto">Encanto</option>
+                  <option value="La Mesa">La Mesa</option>
+                  <option value="Linda Vista">Linda Vista</option>
+                  <option value="Logan Heights">Logan Heights</option>
+                  <option value="Mira Mesa">Mira Mesa</option>
+                  <option value="North Park">North Park</option>
+                  <option value="San Ysidro">San Ysidro</option>
+                  <option value="South Park">South Park</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="locationName">Location Name</label>
+                <input type="text" id="locationName" placeholder="e.g. North Park Library parking lot">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="address">Full Address</label>
+              <input type="text" id="address" placeholder="e.g. 3795 31st St, San Diego, CA 92104">
+              <span class="helper-text">Used to pin this post on the map</span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="tags">Tags</label>
+                <input type="text" id="tags" placeholder="produce, pantry, hot-meals">
+                <span class="helper-text">Comma-separated</span>
+              </div>
+              <div class="form-group">
+                <label for="imageUrl">Image URL (optional)</label>
+                <input type="url" id="imageUrl" placeholder="https://...">
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="clearBtn">Clear</button>
+              <button type="submit" class="btn btn-primary">Post Resource</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Map -->
+      <section class="admin-map-section">
+        <div class="map-container admin-map" id="map"></div>
+      </section>
+
+      <!-- Posts feed -->
+      <section class="feed-section admin-feed-section">
+        <div class="feed-header">
+          <h2 class="feed-title"><span class="feed-icon">📋</span> All Posts</h2>
+        </div>
+        <div class="feed-container admin-feed-container" id="feedContainer"></div>
+      </section>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
