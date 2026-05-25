@@ -223,6 +223,9 @@ export default function AdminDashboard() {
     if (!form.description.trim()) return setFormError('Description is required.')
     if (!primaryOrgId && !isAppAdmin) return setFormError('No organization found for your account.')
 
+    if (!form.is_recurring && !form.start_time) {
+      return setFormError('Start time is required.')
+    }
     if (form.is_recurring && occurrences.filter(o => o.start_time).length === 0) {
       return setFormError('Add at least one date for the recurring event.')
     }
@@ -478,8 +481,8 @@ export default function AdminDashboard() {
               {!form.is_recurring && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
-                    <label style={labelSt}>Start time</label>
-                    <input className="form-input" type="datetime-local" value={form.start_time} onChange={e => f('start_time', e.target.value)} />
+                    <label style={labelSt}>Start time <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                    <input className="form-input" type="datetime-local" value={form.start_time} onChange={e => f('start_time', e.target.value)} required />
                   </div>
                   <div>
                     <label style={labelSt}>End time</label>

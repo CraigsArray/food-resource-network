@@ -452,9 +452,11 @@ export default function PublicFeed() {
                             <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: '0.68rem', fontWeight: 700, background: `${color}22`, color, border: `1px solid ${color}44` }}>
                               {post.category ?? 'food'}
                             </span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>
-                              {timeAgo(post.created_at)}
-                            </span>
+                            {post.start_time && (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                                {new Date(post.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
                           </div>
 
                           {/* Address */}

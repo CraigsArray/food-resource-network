@@ -415,7 +415,11 @@ export default function IframeFeed() {
                               <span style={{ padding: '1px 7px', borderRadius: 5, fontSize: '0.65rem', fontWeight: 700, background: `${color}22`, color, border: `1px solid ${color}44` }}>
                                 {cat?.label ?? post.category}
                               </span>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>{timeAgo(post.created_at)}</span>
+                              {post.start_time && (
+                                <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                                  {new Date(post.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                </span>
+                              )}
                             </div>
 
                             {post.address && (
