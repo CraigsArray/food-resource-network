@@ -314,21 +314,25 @@ export default function IframeFeed() {
             <div ref={mapDivRef} style={{ width: '100%', height: 280, background: 'var(--color-bg-light)', display: activeTab === 'map' ? 'block' : 'none' }} />
 
             {activeTab === 'calendar' && (
-              <div style={{ height: 320, background: 'var(--color-bg-medium)', padding: '0.6rem' }}>
+              <div style={{ height: 480, background: 'var(--color-bg-medium)', padding: '0.4rem' }}>
                 <style>{`
                   .rbc-calendar { font-family: Inter, sans-serif; color: var(--color-text-primary); }
-                  .rbc-toolbar button { color: var(--color-text-secondary); border-color: var(--color-border); background: var(--color-bg-dark); border-radius: 6px; font-size: 0.75rem; padding: 4px 10px; }
+                  .rbc-toolbar { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.25rem; margin-bottom: 4px; min-height: 0; }
+                  .rbc-toolbar .rbc-btn-group { display: flex; flex-wrap: nowrap; gap: 2px; }
+                  .rbc-toolbar button { color: var(--color-text-secondary); border-color: var(--color-border); background: var(--color-bg-dark); border-radius: 5px; font-size: 0.68rem; padding: 2px 7px; white-space: nowrap; }
                   .rbc-toolbar button:hover, .rbc-toolbar button.rbc-active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
-                  .rbc-toolbar-label { font-weight: 700; color: var(--color-text-primary); font-size: 0.85rem; }
-                  .rbc-header { background: var(--color-bg-dark); color: var(--color-text-secondary); border-color: var(--color-border); font-size: 0.72rem; padding: 3px 0; }
+                  .rbc-toolbar-label { flex: 1; font-weight: 700; color: var(--color-text-primary); font-size: 0.8rem; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                  .rbc-header { background: var(--color-bg-dark); color: var(--color-text-secondary); border-color: var(--color-border); font-size: 0.7rem; padding: 2px 0; }
                   .rbc-month-view, .rbc-agenda-view table { border-color: var(--color-border); }
                   .rbc-day-bg { background: var(--color-bg-medium); }
                   .rbc-off-range-bg { background: var(--color-bg-dark); opacity: 0.6; }
                   .rbc-today { background: hsla(28,95%,55%,0.08) !important; }
-                  .rbc-event { background: var(--color-primary); border-radius: 3px; font-size: 0.68rem; border: none; }
+                  .rbc-event { background: var(--color-primary); border-radius: 3px; font-size: 0.7rem; border: none; padding: 1px 3px; }
                   .rbc-show-more { color: var(--color-primary); font-size: 0.68rem; }
-                  .rbc-date-cell { color: var(--color-text-secondary); font-size: 0.72rem; }
+                  .rbc-date-cell { color: var(--color-text-secondary); font-size: 0.72rem; padding: 1px 3px; }
                   .rbc-date-cell.rbc-now { color: var(--color-primary); font-weight: 700; }
+                  .rbc-row-segment { padding: 0 1px; }
+                  .rbc-month-row { min-height: 52px; }
                 `}</style>
                 <Calendar
                   localizer={localizer}
@@ -485,23 +489,6 @@ export default function IframeFeed() {
         </p>
       </div>
 
-      {/* Floating theme toggle */}
-      <button
-        onClick={toggleTheme}
-        title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        style={{
-          position: 'fixed', bottom: 16, right: 16, zIndex: 200,
-          width: 40, height: 40, borderRadius: '50%',
-          background: isDark ? 'rgba(255,255,255,0.15)' : 'white',
-          border: isDark ? '1px solid rgba(255,255,255,0.25)' : '1px solid var(--color-border)',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
-          fontSize: '1.1rem', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          backdropFilter: 'blur(8px)',
-        }}
-      >
-        {isDark ? '☀️' : '🌙'}
-      </button>
     </div>
   )
 }
