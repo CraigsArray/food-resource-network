@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { useAuth } from '../contexts/AuthContext'
 
-const MAPS_KEY = 'AIzaSyATKV3W2gaC31gaDZvAd3M9rmNZk9eapxI'
+const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
 const CATEGORIES = ['food-pantry','hot-meals','drive-thru','community-fridge','produce','bread','dairy','hygiene','diapers','meal-kits','other']
 const NEIGHBORHOODS = ['Barrio Logan','City Heights','Clairemont','Chula Vista','Encanto','La Mesa','Linda Vista','Logan Heights','Mira Mesa','North Park','San Ysidro','South Park']

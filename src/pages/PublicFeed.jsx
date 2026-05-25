@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from '../contexts/AuthContext'
 
-const MAPS_KEY = 'AIzaSyATKV3W2gaC31gaDZvAd3M9rmNZk9eapxI'
+const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
 const ORG_COLORS = {
   'Church':                             '#A855F7',
