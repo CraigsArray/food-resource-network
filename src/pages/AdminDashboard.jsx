@@ -402,23 +402,12 @@ export default function AdminDashboard() {
           {showForm && (
             <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-              {/* Status + Category */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={labelSt}>Status</label>
-                  <select className="form-input" value={form.status} onChange={e => f('status', e.target.value)}>
-                    <option value="published">Published</option>
-                    <option value="draft">Draft</option>
-                    <option value="pending_review">Pending Review</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={labelSt}>Category</label>
-                  <select className="form-input" value={form.category} onChange={e => f('category', e.target.value)}>
-                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                </div>
+              {/* Category */}
+              <div>
+                <label style={labelSt}>Category</label>
+                <select className="form-input" value={form.category} onChange={e => f('category', e.target.value)}>
+                  {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
               </div>
 
               <Divider label="Details" />

@@ -228,8 +228,44 @@ export default function PublicFeed() {
       }}>
         <div style={{ maxWidth: 960, margin: '0 auto', padding: '0.875rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
 
-          {/* Left: title + subtitles */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+          {/* Left: EC Collab branding + main title */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+
+            {/* Top row: back button + logo + "Maintained by" */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+              {/* Back arrow */}
+              <a
+                href="https://elcajoncollaborative.org"
+                title="Return to El Cajon Collaborative"
+                style={{ display: 'flex', alignItems: 'center', color: isDark ? 'rgba(255,255,255,0.65)' : 'var(--color-text-muted)', textDecoration: 'none', flexShrink: 0 }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </a>
+
+              {/* Divider */}
+              <div style={{ width: 1, height: 16, background: isDark ? 'rgba(255,255,255,0.25)' : 'var(--color-border)', flexShrink: 0 }} />
+
+              {/* Logo + text — both link to EC Collab site */}
+              <a
+                href="https://elcajoncollaborative.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}
+              >
+                <img
+                  src="/el-cajob-collab.png"
+                  alt="El Cajon Collaborative"
+                  style={{ height: 20, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+                />
+                <span style={{ fontSize: '0.72rem', fontWeight: 500, color: isDark ? 'rgba(255,255,255,0.75)' : 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                  Maintained by the El Cajon Collaborative
+                </span>
+              </a>
+            </div>
+
+            {/* Main title */}
             <span style={{
               fontFamily: 'Outfit, sans-serif', fontWeight: 800,
               fontSize: 'clamp(1.15rem, 3vw, 1.5rem)', lineHeight: 1.2,
@@ -242,9 +278,6 @@ export default function PublicFeed() {
             </span>
             <span style={{ fontSize: '0.78rem', color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--color-text-secondary)', lineHeight: 1.3 }}>
               Aggregated food pantries &amp; distributions in East County
-            </span>
-            <span style={{ fontSize: '0.72rem', color: isDark ? 'rgba(255,255,255,0.6)' : 'var(--color-text-muted)', lineHeight: 1.3 }}>
-              Maintained by the <strong style={{ color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--color-text-secondary)', fontWeight: 600 }}>El Cajon Collaborative</strong>
             </span>
           </div>
 
