@@ -452,7 +452,7 @@ export default function IframeFeed() {
                           </div>
 
                           {/* Reactions */}
-                          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.625rem', paddingTop: '0.625rem', borderTop: '1px solid var(--color-border)' }}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.625rem', paddingTop: '0.625rem', borderTop: '1px solid var(--color-border)' }}
                             onClick={e => e.stopPropagation()}>
                             <button onClick={() => handleThumbsUp(post.id)} style={{
                               padding: '3px 12px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', border: '1px solid',
@@ -470,6 +470,20 @@ export default function IframeFeed() {
                             }} title={r.reported ? 'Reported' : 'Report this post'}>
                               {r.reported ? '⚠️ Reported' : '!'}
                             </button>
+                            {post.address && (
+                              <a
+                                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent([post.address, post.city, post.zip].filter(Boolean).join(', '))}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  marginLeft: 'auto', padding: '3px 12px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 600,
+                                  border: '1px solid var(--color-border)', background: 'var(--color-surface)',
+                                  color: 'var(--color-text-muted)', textDecoration: 'none',
+                                }}
+                              >
+                                🗺️ Directions
+                              </a>
+                            )}
                           </div>
                         </article>
                       )

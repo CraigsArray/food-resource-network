@@ -360,24 +360,27 @@ export default function PublicFeed() {
 
             {/* Calendar */}
             {activeTab === 'calendar' && (
-              <div style={{ height: 400, background: 'var(--color-bg-medium)', padding: '0.75rem' }}>
+              <div style={{ height: 560, background: 'var(--color-bg-medium)', padding: '0.75rem' }}>
                 <style>{`
                   .rbc-calendar { font-family: Inter, sans-serif; color: var(--color-text-primary); }
-                  .rbc-toolbar button { color: var(--color-text-secondary); border-color: var(--color-border); background: var(--color-bg-dark); border-radius: 8px; font-size: 0.8rem; }
+                  .rbc-toolbar { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.25rem; margin-bottom: 6px; }
+                  .rbc-toolbar .rbc-btn-group { display: flex; flex-wrap: nowrap; gap: 2px; }
+                  .rbc-toolbar button { color: var(--color-text-secondary); border-color: var(--color-border); background: var(--color-bg-dark); border-radius: 8px; font-size: 0.78rem; padding: 3px 10px; white-space: nowrap; }
                   .rbc-toolbar button:hover, .rbc-toolbar button.rbc-active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
-                  .rbc-toolbar-label { font-weight: 700; color: var(--color-text-primary); }
+                  .rbc-toolbar-label { flex: 1; font-weight: 700; color: var(--color-text-primary); text-align: center; white-space: nowrap; }
                   .rbc-header { background: var(--color-bg-dark); color: var(--color-text-secondary); border-color: var(--color-border); font-size: 0.78rem; padding: 4px 0; }
                   .rbc-month-view, .rbc-agenda-view table { border-color: var(--color-border); }
                   .rbc-day-bg { background: var(--color-bg-medium); }
                   .rbc-off-range-bg { background: var(--color-bg-dark); opacity: 0.6; }
                   .rbc-today { background: hsla(28,95%,55%,0.08) !important; }
-                  .rbc-event { background: var(--color-primary); border-radius: 4px; font-size: 0.72rem; border: none; }
+                  .rbc-event { background: var(--color-primary); border-radius: 4px; font-size: 0.72rem; border: none; padding: 1px 4px; }
                   .rbc-show-more { color: var(--color-primary); font-size: 0.72rem; }
-                  .rbc-date-cell { color: var(--color-text-secondary); font-size: 0.78rem; }
+                  .rbc-date-cell { color: var(--color-text-secondary); font-size: 0.78rem; padding: 2px 4px; }
                   .rbc-date-cell.rbc-now { color: var(--color-primary); font-weight: 700; }
                   .rbc-agenda-date-cell, .rbc-agenda-time-cell { color: var(--color-text-secondary); font-size: 0.82rem; }
                   .rbc-agenda-event-cell { color: var(--color-text-primary); font-size: 0.82rem; }
                   .rbc-row-segment .rbc-event-content { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                  .rbc-month-row { min-height: 60px; }
                 `}</style>
                 <Calendar
                   localizer={localizer}
@@ -513,7 +516,7 @@ export default function PublicFeed() {
 
                         {/* Reaction bar */}
                         <div
-                          style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}
                           onClick={e => e.stopPropagation()}
                         >
                           <button
@@ -541,6 +544,22 @@ export default function PublicFeed() {
                           >
                             {r.reported ? '⚠️ Reported' : '!'}
                           </button>
+                          {post.address && (
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent([post.address, post.city, post.zip].filter(Boolean).join(', '))}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                marginLeft: 'auto', padding: '4px 14px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600,
+                                border: '1px solid var(--color-border)', background: 'var(--color-surface)',
+                                color: 'var(--color-text-muted)', textDecoration: 'none', transition: 'all 150ms',
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-primary)'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = 'var(--color-primary)' }}
+                              onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-surface)'; e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.borderColor = 'var(--color-border)' }}
+                            >
+                              🗺️ Directions
+                            </a>
+                          )}
                         </div>
                       </article>
                     )
