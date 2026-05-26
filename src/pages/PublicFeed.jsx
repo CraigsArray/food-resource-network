@@ -408,7 +408,7 @@ export default function PublicFeed() {
             Welcome to the East County Food Network
           </h2>
           <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', margin: 0 }}>
-            This site lists free food resources — including food pantries, distributions, and meals —
+            This site lists free food resources including food pantries, distributions, and meals
             available throughout El Cajon and the surrounding East County communities.
             Browse upcoming events below, explore the map, or use the calendar to plan ahead.
             All listings are contributed by local organizations and updated regularly.
@@ -420,8 +420,6 @@ export default function PublicFeed() {
             You can also call <strong>2-1-1</strong> or visit{' '}
             <a href="https://www.211sandiego.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>211sandiego.org</a>{' '}
             for county-wide assistance.
-            To share a resource or add a listing to this site, reach out to us at{' '}
-            <a href="mailto:coordinator@elcajoncollaborative.org" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>coordinator@elcajoncollaborative.org</a>.
           </p>
         </div>
 
