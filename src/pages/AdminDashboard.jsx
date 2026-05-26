@@ -25,8 +25,16 @@ function newOccurrence() {
 }
 
 export default function AdminDashboard() {
-  const { user, memberships, isAppAdmin, signOut } = useAuth()
+  const { user, profile, memberships, isAppAdmin, signOut } = useAuth()
   const primaryOrgId = memberships[0]?.organization_id
+
+  // ── User profile state ─────────────────────────────────────
+  const [profileForm, setProfileForm]     = useState({ full_name: '' })
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileSuccess, setProfileSuccess] = useState(false)
+  const [profileError, setProfileError]   = useState('')
+  const [showProfile, setShowProfile]     = useState(true)
+  const pf = (key, val) => setProfileForm(prev => ({ ...prev, [key]: val }))
 
   // ── Org profile state ──────────────────────────────────────
   const [orgData, setOrgData]         = useState(null)
@@ -59,6 +67,21 @@ export default function AdminDashboard() {
 
   useEffect(() => { loadPosts(); loadMapsApi() }, [])
   useEffect(() => { if (primaryOrgId) loadOrgData(primaryOrgId) }, [primaryOrgId])
+  useEffect(() => { if (profile) setProfileForm({ full_name: profile.full_name ?? '' }) }, [profile])
+
+  // ── User profile ──────────────────────────────────────────
+  async function saveProfile(e) {
+    e.preventDefault()
+    setProfileError('')
+    setProfileSuccess(false)
+    setProfileSaving(true)
+    const { error } = await supabase.from('profiles')
+      .update({ full_name: profileForm.full_name.trim() })
+      .eq('id', user.id)
+    setProfileSaving(false)
+    if (error) setProfileError(error.message)
+    else setProfileSuccess(true)
+  }
 
   // ── Org ───────────────────────────────────────────────────
   async function loadOrgData(orgId) {
@@ -223,6 +246,9 @@ export default function AdminDashboard() {
     if (!form.description.trim()) return setFormError('Description is required.')
     if (!primaryOrgId && !isAppAdmin) return setFormError('No organization found for your account.')
 
+    if (!form.address.trim()) {
+      return setFormError('Street address is required.')
+    }
     if (!form.is_recurring && !form.start_time) {
       return setFormError('Start time is required.')
     }
@@ -319,7 +345,7 @@ export default function AdminDashboard() {
       }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div>
-            <h1 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 800, fontSize: '1.5rem', color: 'white' }}>Admin Dashboard</h1>
+            <h1 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 800, fontSize: '1.5rem', color: 'white' }}>Profile & Organization Admin Dashboard</h1>
             <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.82rem', marginTop: 2 }}>
               {user?.email}{isAppAdmin && <span style={{ marginLeft: 8, background: 'rgba(255,255,255,0.25)', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>APP ADMIN</span>}
             </p>
@@ -334,9 +360,35 @@ export default function AdminDashboard() {
 
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-        {/* ── Section 1: My Profile & Organization ──────────── */}
+        {/* ── Section 1: My Profile ─────────────────────────── */}
         <section style={sectionCard}>
-          <SectionHeader title="My Profile & Organization" icon="🏢" open={showOrg} onToggle={() => setShowOrg(v => !v)} />
+          <SectionHeader title="My Profile" icon="👤" open={showProfile} onToggle={() => setShowProfile(v => !v)} />
+          {showProfile && (
+            <form onSubmit={saveProfile} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label style={labelSt}>Full name</label>
+                  <input className="form-input" value={profileForm.full_name} onChange={e => pf('full_name', e.target.value)} placeholder="Your name" />
+                </div>
+                <div>
+                  <label style={labelSt}>Email <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--color-text-muted)' }}>(read-only)</span></label>
+                  <input className="form-input" value={user?.email ?? ''} readOnly style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+                </div>
+              </div>
+              {profileError   && <p style={{ color: 'var(--color-error)',   fontSize: '0.85rem' }}>{profileError}</p>}
+              {profileSuccess && <p style={{ color: 'var(--color-success)', fontSize: '0.85rem', fontWeight: 600 }}>✓ Profile saved.</p>}
+              <div>
+                <button type="submit" disabled={profileSaving} style={submitBtn}>
+                  {profileSaving ? 'Saving…' : 'Save Profile'}
+                </button>
+              </div>
+            </form>
+          )}
+        </section>
+
+        {/* ── Section 2: Organization ───────────────────────── */}
+        <section style={sectionCard}>
+          <SectionHeader title="Organization" icon="🏢" open={showOrg} onToggle={() => setShowOrg(v => !v)} />
           {showOrg && (
             <form onSubmit={saveOrg} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
@@ -393,7 +445,7 @@ export default function AdminDashboard() {
           )}
         </section>
 
-        {/* ── Section 2: New / Edit Post ─────────────────────── */}
+        {/* ── Section 3: New / Edit Post ─────────────────────── */}
         <section style={sectionCard}>
           <SectionHeader
             title={editing ? 'Edit Post' : 'New Resource Post'}
@@ -443,7 +495,7 @@ export default function AdminDashboard() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={labelSt}>Street address</label>
+                  <label style={labelSt}>Street address <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <input className="form-input" value={form.address} onChange={e => f('address', e.target.value)} placeholder="1234 Main St" />
                 </div>
                 <div>

@@ -40,11 +40,13 @@ export function AuthProvider({ children }) {
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
-        loadUserData(session.user.id)
+        setLoading(true)
+        loadUserData(session.user.id).finally(() => setLoading(false))
       } else {
         setProfile(null)
         setMemberships([])
         setIsAppAdmin(false)
+        setLoading(false)
       }
     })
 

@@ -349,7 +349,6 @@ DECLARE
   v_email   text;
   v_domain  text;
   v_org_id  uuid;
-  v_pending boolean;
 BEGIN
   v_user_id := auth.uid();
   IF v_user_id IS NULL THEN
@@ -365,10 +364,24 @@ BEGIN
     SET email     = EXCLUDED.email,
         full_name = COALESCE(EXCLUDED.full_name, profiles.full_name);
 
-  SELECT id INTO v_org_id
-  FROM organizations
-  WHERE domain = v_domain AND is_verified = true
+  -- If user already has a membership, they're re-logging in — just return.
+  SELECT organization_id INTO v_org_id
+  FROM organization_members
+  WHERE user_id = v_user_id
   LIMIT 1;
+
+  IF v_org_id IS NOT NULL THEN
+    RETURN jsonb_build_object('redirect', '/admin', 'organization_id', v_org_id, 'matched', true);
+  END IF;
+
+  -- Check if domain matches a pre-verified organization (e.g. feedingsandiego.org).
+  -- Public consumer domains are excluded so each user gets their own isolated org.
+  IF v_domain NOT IN ('gmail.com','yahoo.com','hotmail.com','outlook.com','icloud.com','live.com','msn.com','aol.com','protonmail.com') THEN
+    SELECT id INTO v_org_id
+    FROM organizations
+    WHERE domain = v_domain AND is_verified = true
+    LIMIT 1;
+  END IF;
 
   IF v_org_id IS NOT NULL THEN
     -- Domain matched a verified org — add as member
@@ -376,10 +389,9 @@ BEGIN
     VALUES (v_user_id, v_org_id, 'member')
     ON CONFLICT (user_id, organization_id) DO NOTHING;
   ELSE
-    -- PILOT MODE: auto-create an org from the user's email domain
+    -- PILOT MODE: create a per-user org with no domain so accounts never share data.
     INSERT INTO organizations (name, domain, is_verified, created_by)
-    VALUES (v_domain, v_domain, true, v_user_id)
-    ON CONFLICT (domain) DO UPDATE SET is_verified = true
+    VALUES (v_email, NULL, true, v_user_id)
     RETURNING id INTO v_org_id;
 
     INSERT INTO organization_members (user_id, organization_id, role)
