@@ -838,7 +838,7 @@ export default function AdminDashboard() {
                 <button type="submit" disabled={saving} style={{ ...submitBtn, flex: 1 }}>
                   {saving ? 'Saving…' : editing ? 'Update Post' : 'Publish Post'}
                 </button>
-                <button type="button" className="btn-secondary" onClick={cancelEdit} style={{ minWidth: 100 }}>
+                <button type="button" className="btn-secondary" onClick={cancelEdit} style={{ minWidth: 100, textAlign: 'center', justifyContent: 'center' }}>
                   {editing ? 'Cancel' : 'Clear'}
                 </button>
               </div>
