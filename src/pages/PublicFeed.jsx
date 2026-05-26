@@ -27,6 +27,52 @@ const ORG_COLORS = {
 
 function orgColor(name) { return ORG_COLORS[name] ?? '#22C55E' }
 
+function attachmentType(url) {
+  if (!url) return null
+  const ext = url.split('?')[0].toLowerCase().split('.').pop()
+  if (['jpg','jpeg','png','gif','webp','svg','avif','bmp'].includes(ext)) return 'image'
+  if (ext === 'pdf') return 'pdf'
+  return 'file'
+}
+
+function PostAttachment({ url, title }) {
+  const type = attachmentType(url)
+  if (!type) return null
+  if (type === 'image') {
+    return <img src={url} alt={title} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 10, marginBottom: '0.75rem' }} loading="lazy" />
+  }
+  const filename = decodeURIComponent(url.split('/').pop().split('?')[0]) || 'Attachment'
+  const isPdf = type === 'pdf'
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" style={{
+      display: 'flex', alignItems: 'center', gap: '0.75rem',
+      padding: '0.75rem 1rem', borderRadius: 10, marginBottom: '0.75rem',
+      border: `1px solid ${isPdf ? 'hsla(0,70%,55%,0.3)' : 'var(--color-border)'}`,
+      background: isPdf ? 'hsla(0,70%,55%,0.06)' : 'var(--color-bg-light)',
+      textDecoration: 'none', transition: 'opacity 150ms',
+    }} onMouseEnter={e => e.currentTarget.style.opacity = '0.8'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+      {isPdf ? (
+        <div style={{ width: 38, height: 38, borderRadius: 8, background: '#e53935', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <span style={{ color: 'white', fontSize: '0.58rem', fontWeight: 900, letterSpacing: '-0.5px' }}>PDF</span>
+        </div>
+      ) : (
+        <div style={{ width: 38, height: 38, borderRadius: 8, background: 'var(--color-bg-medium)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-text-muted)' }}>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '0.83rem', fontWeight: 600, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{filename}</div>
+        <div style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>{isPdf ? 'PDF Document' : 'File'} · Click to open</div>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-text-muted)', flexShrink: 0 }}>
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+      </svg>
+    </a>
+  )
+}
+
 function timeAgo(ts) {
   const diff = Date.now() - new Date(ts).getTime()
   const m = Math.floor(diff / 60000)
@@ -575,9 +621,7 @@ export default function PublicFeed() {
                               {post.description && (
                                 <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.7, marginBottom: '0.75rem', fontSize: '0.9rem' }}>{post.description}</p>
                               )}
-                              {post.image_url && (
-                                <img src={post.image_url} alt={post.title} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 10, marginBottom: '0.75rem' }} loading="lazy" />
-                              )}
+                              <PostAttachment url={post.image_url} title={post.title} />
                               {post.tags?.length > 0 && (
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.5rem' }}>
                                   {post.tags.map(t => (

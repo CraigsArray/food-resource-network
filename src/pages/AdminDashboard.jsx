@@ -748,7 +748,7 @@ export default function AdminDashboard() {
               <Divider label="Media" />
 
               <div>
-                <label style={labelSt}>Post image / flyer</label>
+                <label style={labelSt}>Post image, flyer, or PDF</label>
                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.625rem' }}>
                   {['url', 'file'].map(m => (
                     <button key={m} type="button" onClick={() => setImageMode(m)} style={{
@@ -771,27 +771,54 @@ export default function AdminDashboard() {
                     style={{ border: '2px dashed var(--color-border)', borderRadius: 10, padding: '1.25rem', textAlign: 'center', background: 'var(--color-bg-light)', cursor: 'pointer' }}
                     onClick={() => document.getElementById('post-image-input').click()}
                   >
-                    <input id="post-image-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
+                    <input id="post-image-input" type="file" accept="image/*,.pdf,.doc,.docx,.xlsx,.pptx" style={{ display: 'none' }} onChange={e => {
                       const file = e.target.files[0]
                       if (file) { setImageFile(file); setImagePreview(URL.createObjectURL(file)) }
                     }} />
                     {imageFile
                       ? <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>📎 {imageFile.name}</p>
-                      : <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Click to select an image or flyer</p>
+                      : <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Click to select an image, PDF, or flyer</p>
                     }
                   </div>
                 )}
 
-                {imagePreview && (
-                  <div style={{ marginTop: '0.625rem', position: 'relative', display: 'inline-block' }}>
-                    <img src={imagePreview} alt="Preview" style={{ maxHeight: 140, borderRadius: 8, border: '1px solid var(--color-border)' }} />
-                    <button type="button"
-                      onClick={() => { setImagePreview(''); setImageFile(null); f('image_url', '') }}
-                      style={{ position: 'absolute', top: -8, right: -8, width: 22, height: 22, borderRadius: '50%', background: 'var(--color-error)', color: 'white', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      ✕
-                    </button>
-                  </div>
-                )}
+                {imagePreview && (() => {
+                  const isImg = imageFile
+                    ? ['jpg','jpeg','png','gif','webp','svg','avif','bmp'].includes(imageFile.name.split('.').pop().toLowerCase())
+                    : ['jpg','jpeg','png','gif','webp','svg','avif','bmp'].includes(form.image_url.split('?')[0].toLowerCase().split('.').pop())
+                  const isPdf = imageFile
+                    ? imageFile.name.split('.').pop().toLowerCase() === 'pdf'
+                    : form.image_url.split('?')[0].toLowerCase().endsWith('.pdf')
+                  const filename = imageFile?.name ?? form.image_url.split('/').pop().split('?')[0]
+                  return (
+                    <div style={{ marginTop: '0.625rem', position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {isImg ? (
+                        <img src={imagePreview} alt="Preview" style={{ maxHeight: 140, borderRadius: 8, border: '1px solid var(--color-border)' }} />
+                      ) : (
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: '0.625rem',
+                          padding: '0.625rem 0.875rem', borderRadius: 8,
+                          border: `1px solid ${isPdf ? 'hsla(0,70%,55%,0.3)' : 'var(--color-border)'}`,
+                          background: isPdf ? 'hsla(0,70%,55%,0.06)' : 'var(--color-bg-dark)',
+                        }}>
+                          {isPdf
+                            ? <div style={{ width: 34, height: 34, borderRadius: 7, background: '#e53935', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'white', fontSize: '0.55rem', fontWeight: 900 }}>PDF</span></div>
+                            : <div style={{ width: 34, height: 34, borderRadius: 7, background: 'var(--color-bg-medium)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📎</div>
+                          }
+                          <div>
+                            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{filename}</div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>Ready to upload</div>
+                          </div>
+                        </div>
+                      )}
+                      <button type="button"
+                        onClick={() => { setImagePreview(''); setImageFile(null); f('image_url', '') }}
+                        style={{ position: 'absolute', top: -8, right: -8, width: 22, height: 22, borderRadius: '50%', background: 'var(--color-error)', color: 'white', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        ✕
+                      </button>
+                    </div>
+                  )
+                })()}
               </div>
 
               <Divider label="Options" />
@@ -864,7 +891,7 @@ export default function AdminDashboard() {
                           )}
                         </div>
                         <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                          {cat?.label ?? post.category} · {post.address || 'No address'} · {new Date(post.created_at).toLocaleDateString()}
+                          {cat?.label ?? post.category} · {post.address || 'No address'} · {post.start_time ? new Date(post.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set'}
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', flexShrink: 0 }}>
