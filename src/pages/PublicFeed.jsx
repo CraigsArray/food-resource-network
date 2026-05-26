@@ -287,7 +287,7 @@ export default function PublicFeed() {
               East County Food Network
             </span>
             <span style={{ fontSize: '0.78rem', color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--color-text-secondary)', lineHeight: 1.3 }}>
-              Aggregated food pantries &amp; distributions in East County
+              Local Food Pantries and Distributions in East County, San Diego
             </span>
             <span style={{ fontSize: '0.72rem', color: isDark ? 'rgba(255,255,255,0.6)' : 'var(--color-text-muted)', lineHeight: 1.3 }}>
               Maintained by the El Cajon Collaborative
@@ -309,6 +309,40 @@ export default function PublicFeed() {
 
       {/* Content */}
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem' }}>
+
+        {/* Welcome blurb */}
+        <div style={{
+          marginBottom: '2rem',
+          padding: '1.25rem 1.5rem',
+          background: 'var(--color-bg-medium)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 16,
+          lineHeight: 1.65,
+        }}>
+          <h2 style={{
+            fontFamily: 'Outfit, sans-serif', fontWeight: 700,
+            fontSize: '1.1rem', color: 'var(--color-text-primary)',
+            marginBottom: '0.6rem',
+          }}>
+            Welcome to the East County Food Network
+          </h2>
+          <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', margin: 0 }}>
+            This site lists free food resources — including food pantries, distributions, and meals —
+            available throughout El Cajon and the surrounding East County communities.
+            Browse upcoming events below, explore the map, or use the calendar to plan ahead.
+            All listings are contributed by local organizations and updated regularly.
+          </p>
+          <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginTop: '0.75rem', marginBottom: 0 }}>
+            If you don't find what you're looking for here, visit{' '}
+            <a href="https://ecassist.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>ECAssist.org</a>{' '}
+            for a broader directory of East County resources.
+            You can also call <strong>2-1-1</strong> or visit{' '}
+            <a href="https://www.211sandiego.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>211sandiego.org</a>{' '}
+            for county-wide assistance.
+            To share a resource or add a listing to this site, reach out to us at{' '}
+            <a href="mailto:coordinator@elcajoncollaborative.org" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>coordinator@elcajoncollaborative.org</a>.
+          </p>
+        </div>
 
         {/* Folder tabs + Map/Calendar */}
         <div style={{ marginBottom: '2rem' }}>
