@@ -59,11 +59,22 @@ export default function AdminDashboard() {
   const [saving, setSaving]           = useState(false)
   const [showForm, setShowForm]       = useState(true)
 
+  // ── Recurrence pattern state ───────────────────────────────
+  const [recurPattern, setRecurPattern] = useState({
+    frequency: 'weekly',   // 'daily' | 'weekly' | 'biweekly' | 'monthly'
+    days: [],              // days of week: 0=Sun,1=Mon,...,6=Sat
+    startDate: '',         // YYYY-MM-DD
+    endDate: '',           // YYYY-MM-DD
+    eventStartTime: '',    // HH:MM
+    eventEndTime: '',      // HH:MM
+  })
+
   const geocoderRef = useRef(null)
   const mapRef      = useRef(null)
   const mapDivRef   = useRef(null)
-  const f  = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
-  const of = (key, val) => setOrgForm(prev => ({ ...prev, [key]: val }))
+  const f   = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
+  const of  = (key, val) => setOrgForm(prev => ({ ...prev, [key]: val }))
+  const rpf = (key, val) => setRecurPattern(prev => ({ ...prev, [key]: val }))
 
   useEffect(() => { loadPosts(); loadMapsApi() }, [])
   useEffect(() => { if (primaryOrgId) loadOrgData(primaryOrgId) }, [primaryOrgId])
@@ -181,6 +192,45 @@ export default function AdminDashboard() {
   }
   function updateOccurrence(key, field, value) {
     setOccurrences(prev => prev.map(o => o._key === key ? { ...o, [field]: value } : o))
+  }
+
+  function generateFromPattern() {
+    const { frequency, days, startDate, endDate, eventStartTime, eventEndTime } = recurPattern
+    if (!startDate || !endDate) return
+    if ((frequency === 'weekly' || frequency === 'biweekly') && days.length === 0) return
+
+    const results = []
+    const origin = new Date(startDate + 'T12:00:00')
+    const end    = new Date(endDate   + 'T12:00:00')
+    const cur    = new Date(origin)
+
+    while (cur <= end && results.length < 366) {
+      const dow      = cur.getDay()
+      const diffDays = Math.round((cur - origin) / 86400000)
+      const weekIdx  = Math.floor(diffDays / 7)
+
+      const include =
+        frequency === 'daily'     ? true :
+        frequency === 'weekly'    ? days.includes(dow) :
+        frequency === 'biweekly'  ? (days.includes(dow) && weekIdx % 2 === 0) :
+        frequency === 'monthly'   ? (cur.getDate() === origin.getDate()) :
+        false
+
+      if (include) {
+        const y = cur.getFullYear()
+        const m = String(cur.getMonth() + 1).padStart(2, '0')
+        const d = String(cur.getDate()).padStart(2, '0')
+        const ds = `${y}-${m}-${d}`
+        results.push({
+          _key:       crypto.randomUUID(),
+          id:         null,
+          start_time: eventStartTime ? `${ds}T${eventStartTime}` : '',
+          end_time:   eventEndTime   ? `${ds}T${eventEndTime}`   : '',
+        })
+      }
+      cur.setDate(cur.getDate() + 1)
+    }
+    if (results.length > 0) setOccurrences(results)
   }
 
   async function startEdit(post) {
@@ -545,76 +595,152 @@ export default function AdminDashboard() {
 
               {/* Multiple dates (recurring) */}
               {form.is_recurring && (
-                <div style={{ background: 'var(--color-bg-light)', borderRadius: 12, border: '1px solid var(--color-border)', overflow: 'hidden' }}>
-                  <div style={{
-                    padding: '0.75rem 1rem', borderBottom: '1px solid var(--color-border)',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                      Scheduled dates &nbsp;
-                      <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>
-                        ({occurrences.filter(o => o.start_time).length} set)
-                      </span>
-                    </span>
-                    <button type="button" onClick={addOccurrence} style={{
-                      padding: '4px 14px', borderRadius: 8, fontSize: '0.8rem', fontWeight: 700,
-                      background: 'var(--color-primary)', color: 'white', border: 'none', cursor: 'pointer',
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+
+                  {/* ── Pattern builder ── */}
+                  <div style={{ background: 'var(--color-bg-light)', borderRadius: 12, border: '1px solid var(--color-border)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Auto-generate dates</span>
+
+                    {/* Frequency */}
+                    <div>
+                      <label style={labelSt}>Repeat</label>
+                      <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                        {[['daily','Daily'],['weekly','Weekly'],['biweekly','Bi-weekly'],['monthly','Monthly']].map(([val, lbl]) => (
+                          <button key={val} type="button" onClick={() => rpf('frequency', val)} style={{
+                            padding: '4px 14px', borderRadius: 20, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', border: '1px solid',
+                            background:   recurPattern.frequency === val ? 'var(--color-primary)' : 'var(--color-surface)',
+                            color:        recurPattern.frequency === val ? 'white' : 'var(--color-text-muted)',
+                            borderColor:  recurPattern.frequency === val ? 'var(--color-primary)' : 'var(--color-border)',
+                          }}>{lbl}</button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Day-of-week selector (weekly / biweekly) */}
+                    {(recurPattern.frequency === 'weekly' || recurPattern.frequency === 'biweekly') && (
+                      <div>
+                        <label style={labelSt}>On days</label>
+                        <div style={{ display: 'flex', gap: '0.375rem' }}>
+                          {['Su','Mo','Tu','We','Th','Fr','Sa'].map((d, i) => {
+                            const on = recurPattern.days.includes(i)
+                            return (
+                              <button key={i} type="button" onClick={() => rpf('days', on ? recurPattern.days.filter(x => x !== i) : [...recurPattern.days, i])} style={{
+                                width: 36, height: 36, borderRadius: '50%', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: '1px solid',
+                                background:  on ? 'var(--color-primary)' : 'var(--color-surface)',
+                                color:       on ? 'white' : 'var(--color-text-muted)',
+                                borderColor: on ? 'var(--color-primary)' : 'var(--color-border)',
+                              }}>{d}</button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Date range */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div>
+                        <label style={labelSt}>Start date</label>
+                        <input className="form-input" type="date" value={recurPattern.startDate} onChange={e => rpf('startDate', e.target.value)} />
+                      </div>
+                      <div>
+                        <label style={labelSt}>End date</label>
+                        <input className="form-input" type="date" value={recurPattern.endDate} onChange={e => rpf('endDate', e.target.value)} />
+                      </div>
+                    </div>
+
+                    {/* Event time */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div>
+                        <label style={labelSt}>Event start time</label>
+                        <input className="form-input" type="time" value={recurPattern.eventStartTime} onChange={e => rpf('eventStartTime', e.target.value)} />
+                      </div>
+                      <div>
+                        <label style={labelSt}>Event end time <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(optional)</span></label>
+                        <input className="form-input" type="time" value={recurPattern.eventEndTime} onChange={e => rpf('eventEndTime', e.target.value)} />
+                      </div>
+                    </div>
+
+                    <button type="button" onClick={generateFromPattern} style={{
+                      alignSelf: 'flex-start', padding: '6px 20px', borderRadius: 8, fontSize: '0.85rem', fontWeight: 700,
+                      background: 'linear-gradient(135deg, hsl(28,95%,55%), hsl(340,82%,52%))',
+                      color: '#1a0a00', border: 'none', cursor: 'pointer',
                     }}>
-                      + Add date
+                      ↻ Generate dates ({occurrences.filter(o => o.start_time).length} so far)
                     </button>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', padding: '0.5rem', gap: '0.25rem' }}>
-                    {occurrences.map((occ, idx) => (
-                      <div key={occ._key} style={{
-                        display: 'grid', gridTemplateColumns: '1fr 1fr auto',
-                        gap: '0.5rem', alignItems: 'end',
-                        padding: '0.5rem 0.5rem',
-                        borderRadius: 8,
-                        background: idx % 2 === 1 ? 'var(--color-bg-medium)' : 'transparent',
+                  {/* ── Manual list ── */}
+                  <div style={{ background: 'var(--color-bg-light)', borderRadius: 12, border: '1px solid var(--color-border)', overflow: 'hidden' }}>
+                    <div style={{
+                      padding: '0.75rem 1rem', borderBottom: '1px solid var(--color-border)',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                        Scheduled dates &nbsp;
+                        <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>
+                          ({occurrences.filter(o => o.start_time).length} set)
+                        </span>
+                      </span>
+                      <button type="button" onClick={addOccurrence} style={{
+                        padding: '4px 14px', borderRadius: 8, fontSize: '0.8rem', fontWeight: 700,
+                        background: 'var(--color-primary)', color: 'white', border: 'none', cursor: 'pointer',
                       }}>
-                        <div>
-                          {idx === 0 && <label style={{ ...labelSt, marginBottom: '0.25rem' }}>Start</label>}
-                          <input
-                            className="form-input"
-                            type="datetime-local"
-                            value={occ.start_time}
-                            onChange={e => updateOccurrence(occ._key, 'start_time', e.target.value)}
-                          />
+                        + Add date
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', padding: '0.5rem', gap: '0.25rem', maxHeight: 320, overflowY: 'auto' }}>
+                      {occurrences.map((occ, idx) => (
+                        <div key={occ._key} style={{
+                          display: 'grid', gridTemplateColumns: '1fr 1fr auto',
+                          gap: '0.5rem', alignItems: 'end',
+                          padding: '0.5rem 0.5rem',
+                          borderRadius: 8,
+                          background: idx % 2 === 1 ? 'var(--color-bg-medium)' : 'transparent',
+                        }}>
+                          <div>
+                            {idx === 0 && <label style={{ ...labelSt, marginBottom: '0.25rem' }}>Start</label>}
+                            <input
+                              className="form-input"
+                              type="datetime-local"
+                              value={occ.start_time}
+                              onChange={e => updateOccurrence(occ._key, 'start_time', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            {idx === 0 && (
+                              <label style={{ ...labelSt, marginBottom: '0.25rem' }}>
+                                End <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(optional)</span>
+                              </label>
+                            )}
+                            <input
+                              className="form-input"
+                              type="datetime-local"
+                              value={occ.end_time}
+                              onChange={e => updateOccurrence(occ._key, 'end_time', e.target.value)}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeOccurrence(occ._key)}
+                            disabled={occurrences.length === 1}
+                            title="Remove this date"
+                            style={{
+                              width: 30, height: 30, borderRadius: '50%', border: 'none',
+                              background: occurrences.length === 1 ? 'var(--color-border)' : 'hsla(0,84%,60%,0.12)',
+                              color: occurrences.length === 1 ? 'var(--color-text-muted)' : 'var(--color-error)',
+                              cursor: occurrences.length === 1 ? 'not-allowed' : 'pointer',
+                              fontWeight: 700, fontSize: '1.1rem',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              alignSelf: idx === 0 ? 'flex-end' : 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            ×
+                          </button>
                         </div>
-                        <div>
-                          {idx === 0 && (
-                            <label style={{ ...labelSt, marginBottom: '0.25rem' }}>
-                              End <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(optional)</span>
-                            </label>
-                          )}
-                          <input
-                            className="form-input"
-                            type="datetime-local"
-                            value={occ.end_time}
-                            onChange={e => updateOccurrence(occ._key, 'end_time', e.target.value)}
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeOccurrence(occ._key)}
-                          disabled={occurrences.length === 1}
-                          title="Remove this date"
-                          style={{
-                            width: 30, height: 30, borderRadius: '50%', border: 'none',
-                            background: occurrences.length === 1 ? 'var(--color-border)' : 'hsla(0,84%,60%,0.12)',
-                            color: occurrences.length === 1 ? 'var(--color-text-muted)' : 'var(--color-error)',
-                            cursor: occurrences.length === 1 ? 'not-allowed' : 'pointer',
-                            fontWeight: 700, fontSize: '1.1rem',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            alignSelf: idx === 0 ? 'flex-end' : 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}

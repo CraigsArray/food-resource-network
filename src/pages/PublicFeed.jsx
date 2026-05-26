@@ -111,14 +111,23 @@ export default function PublicFeed() {
   const [reactions, setReactions] = useState(() => {
     try { return JSON.parse(localStorage.getItem('feedReactions') ?? '{}') } catch { return {} }
   })
-  const [toast, setToast]       = useState('')
-  const [activeTab, setActiveTab] = useState('map')
-  const mapRef     = useRef(null)
-  const mapDivRef  = useRef(null)
-  const markersRef = useRef([])
-  const themeRef   = useRef(theme)
+  const [toast, setToast]         = useState('')
+  const [activeTab, setActiveTab]   = useState('map')
+  const [visibleCount, setVisibleCount] = useState(50)
+  const mapRef         = useRef(null)
+  const mapDivRef      = useRef(null)
+  const markersRef     = useRef([])
+  const themeRef       = useRef(theme)
+  const pendingScrollRef = useRef(null)
 
   useEffect(() => { themeRef.current = theme }, [theme])
+
+  useEffect(() => {
+    if (!pendingScrollRef.current) return
+    const id = pendingScrollRef.current
+    pendingScrollRef.current = null
+    setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
+  }, [visibleCount])
 
   useEffect(() => {
     supabase
@@ -157,9 +166,12 @@ export default function PublicFeed() {
 
   useEffect(() => {
     if (!mapRef.current || posts.length === 0) return
+    const sortedAll = [...posts].filter(p => p.start_time).sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+    const noDates = posts.filter(p => !p.start_time)
+    const visiblePosts = [...sortedAll, ...noDates].slice(0, visibleCount)
     markersRef.current.forEach(m => m.setMap(null))
     markersRef.current = []
-    posts.forEach(post => {
+    visiblePosts.forEach(post => {
       if (!post.latitude || !post.longitude) return
       const color = orgColor(post.organizations?.name)
       const marker = new window.google.maps.Marker({
@@ -179,11 +191,24 @@ export default function PublicFeed() {
       marker.addListener('click', () => {
         markersRef.current.forEach(m => m.infoWindow?.close())
         iw.open(mapRef.current, marker)
+        if (post.start_time) {
+          const d = new Date(post.start_time)
+          const feedId = `feed-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+          const sortedPosts = [...posts].filter(p => p.start_time)
+            .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+          const idx = sortedPosts.findIndex(p => p.id === post.id)
+          if (idx !== -1 && idx >= visibleCount) {
+            setVisibleCount(idx + 1)
+            pendingScrollRef.current = feedId
+          } else {
+            document.getElementById(feedId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+        }
       })
       marker.infoWindow = iw
       markersRef.current.push(marker)
     })
-  }, [posts])
+  }, [posts, visibleCount])
 
   function panTo(post) {
     if (!mapRef.current || !post.latitude || !post.longitude) return
@@ -224,7 +249,17 @@ export default function PublicFeed() {
   function handleCalendarEventClick(event) {
     const d = new Date(event.start)
     const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
-    document.getElementById(`feed-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const feedId = `feed-${key}`
+    const postId = event.id
+    const sortedPosts = [...posts].filter(p => p.start_time)
+      .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+    const idx = sortedPosts.findIndex(p => p.id === postId)
+    if (idx !== -1 && idx >= visibleCount) {
+      setVisibleCount(idx + 1)
+      pendingScrollRef.current = feedId
+    } else {
+      document.getElementById(feedId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   }
 
   function handleReport(postId) {
@@ -450,9 +485,15 @@ export default function PublicFeed() {
           <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '3rem' }}>Loading resources…</p>
         ) : posts.length === 0 ? (
           <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '3rem' }}>📭 No active posts yet.</p>
-        ) : (
+        ) : (() => {
+          const sortedPosts = [...posts].filter(p => p.start_time).sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+          const noDates = posts.filter(p => !p.start_time)
+          const allOrdered = [...sortedPosts, ...noDates]
+          const visiblePosts = allOrdered.slice(0, visibleCount)
+          const remaining = allOrdered.length - visiblePosts.length
+          return (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {groupPostsByDate(posts).map(({ key, label, isToday, posts: group }, gi) => (
+            {groupPostsByDate(visiblePosts).map(({ key, label, isToday, posts: group }, gi) => (
               <div key={key} id={`feed-${key}`}>
                 {/* Date section header */}
                 <div style={{
@@ -601,8 +642,26 @@ export default function PublicFeed() {
                 </div>
               </div>
             ))}
+            {remaining > 0 && (
+              <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                <button
+                  onClick={() => setVisibleCount(c => c + 50)}
+                  style={{
+                    padding: '0.7rem 2rem', borderRadius: 24, fontSize: '0.9rem', fontWeight: 700,
+                    background: 'var(--color-bg-medium)', color: 'var(--color-text-secondary)',
+                    border: '1px solid var(--color-border)', cursor: 'pointer',
+                    transition: 'all 150ms',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-primary)'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = 'var(--color-primary)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-bg-medium)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; e.currentTarget.style.borderColor = 'var(--color-border)' }}
+                >
+                  Show {remaining} more event{remaining !== 1 ? 's' : ''} ↓
+                </button>
+              </div>
+            )}
           </div>
-        )}
+          )
+        })()}
 
         <p style={{ marginTop: '2.5rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--color-text-muted)', paddingBottom: '1rem' }}>
           Are you a food provider?{' '}
