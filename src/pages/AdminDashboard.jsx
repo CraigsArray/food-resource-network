@@ -834,11 +834,11 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingTop: '0.25rem' }}>
-                <button type="submit" disabled={saving} style={{ ...submitBtn, width: '100%' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.25rem' }}>
+                <button type="submit" disabled={saving} style={{ ...submitBtn, flex: 1 }}>
                   {saving ? 'Saving…' : editing ? 'Update Post' : 'Publish Post'}
                 </button>
-                <button type="button" className="btn-secondary" onClick={cancelEdit} style={{ alignSelf: 'center', minWidth: 120 }}>
+                <button type="button" className="btn-secondary" onClick={cancelEdit} style={{ minWidth: 100 }}>
                   {editing ? 'Cancel' : 'Clear'}
                 </button>
               </div>
