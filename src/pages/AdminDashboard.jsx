@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { Calendar, dateFnsLocalizer } from 'react-big-calendar'
+import { format, parse, startOfWeek, getDay } from 'date-fns'
+import { enUS } from 'date-fns/locale'
+import 'react-big-calendar/lib/css/react-big-calendar.css'
+
+const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { 'en-US': enUS } })
 
 const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
@@ -15,7 +21,8 @@ const NEIGHBORHOODS = ['Alpine','El Cajon','Jamul','La Mesa','Lakeside','Lemon G
 
 const EMPTY_FORM = {
   title: '', description: '', address: '', city: 'El Cajon', zip: '',
-  start_time: '', end_time: '', category: 'food-pantry', tags: '', image_url: '',
+  event_date: '', start_time_only: '', end_time_only: '',
+  category: 'food-pantry', tags: '', image_url: '',
   is_active: true, status: 'published', neighborhood: '', location_name: '',
   is_recurring: false,
 }
@@ -70,8 +77,6 @@ export default function AdminDashboard() {
   })
 
   const geocoderRef = useRef(null)
-  const mapRef      = useRef(null)
-  const mapDivRef   = useRef(null)
   const f   = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
   const of  = (key, val) => setOrgForm(prev => ({ ...prev, [key]: val }))
   const rpf = (key, val) => setRecurPattern(prev => ({ ...prev, [key]: val }))
@@ -163,13 +168,6 @@ export default function AdminDashboard() {
 
   function initMap() {
     geocoderRef.current = new window.google.maps.Geocoder()
-    if (mapDivRef.current && !mapRef.current) {
-      mapRef.current = new window.google.maps.Map(mapDivRef.current, {
-        center: { lat: 32.7957, lng: -116.9625 },
-        zoom: 11,
-        styles: [],
-      })
-    }
   }
 
   async function geocode(address) {
@@ -236,14 +234,15 @@ export default function AdminDashboard() {
   async function startEdit(post) {
     setEditing(post.id)
     setForm({
-      title:         post.title         ?? '',
-      description:   post.description   ?? '',
-      address:       post.address       ?? '',
-      city:          post.city          ?? 'El Cajon',
-      zip:           post.zip           ?? '',
-      start_time:    post.start_time    ? post.start_time.slice(0, 16) : '',
-      end_time:      post.end_time      ? post.end_time.slice(0, 16)   : '',
-      category:      post.category      ?? 'food-pantry',
+      title:           post.title         ?? '',
+      description:     post.description   ?? '',
+      address:         post.address       ?? '',
+      city:            post.city          ?? 'El Cajon',
+      zip:             post.zip           ?? '',
+      event_date:      post.start_time    ? post.start_time.slice(0, 10)    : '',
+      start_time_only: post.start_time    ? post.start_time.slice(11, 16)   : '',
+      end_time_only:   post.end_time      ? post.end_time.slice(11, 16)     : '',
+      category:        post.category      ?? 'food-pantry',
       tags:          (post.tags ?? []).join(', '),
       image_url:     post.image_url     ?? '',
       is_active:     post.is_active     ?? true,
@@ -299,8 +298,8 @@ export default function AdminDashboard() {
     if (!form.address.trim()) {
       return setFormError('Street address is required.')
     }
-    if (!form.is_recurring && !form.start_time) {
-      return setFormError('Start time is required.')
+    if (!form.is_recurring && (!form.event_date || !form.start_time_only)) {
+      return setFormError('Event date and start time are required.')
     }
     if (form.is_recurring && occurrences.filter(o => o.start_time).length === 0) {
       return setFormError('Add at least one date for the recurring event.')
@@ -330,8 +329,8 @@ export default function AdminDashboard() {
       zip:             form.zip.trim(),
       neighborhood:    form.neighborhood,
       location_name:   form.location_name.trim(),
-      start_time:      form.is_recurring ? (firstOcc?.start_time || null) : (form.start_time || null),
-      end_time:        form.is_recurring ? (firstOcc?.end_time   || null) : (form.end_time   || null),
+      start_time:      form.is_recurring ? (firstOcc?.start_time || null) : (form.event_date && form.start_time_only ? `${form.event_date}T${form.start_time_only}` : null),
+      end_time:        form.is_recurring ? (firstOcc?.end_time   || null) : (form.event_date && form.end_time_only   ? `${form.event_date}T${form.end_time_only}`   : null),
       category:        form.category,
       tags:            form.tags.split(',').map(t => t.trim()).filter(Boolean),
       image_url,
@@ -534,16 +533,16 @@ export default function AdminDashboard() {
                 <input className="form-input" value={form.location_name} onChange={e => f('location_name', e.target.value)} placeholder="e.g. First Baptist Church parking lot" />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '1rem' }}>
-                <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
+                <div style={{ gridColumn: 'span 2', minWidth: 0 }}>
                   <label style={labelSt}>Street address <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <input className="form-input" value={form.address} onChange={e => f('address', e.target.value)} placeholder="1234 Main St" />
                 </div>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <label style={labelSt}>City</label>
                   <input className="form-input" value={form.city} onChange={e => f('city', e.target.value)} />
                 </div>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <label style={labelSt}>ZIP</label>
                   <input className="form-input" value={form.zip} onChange={e => f('zip', e.target.value)} placeholder="92020" />
                 </div>
@@ -572,14 +571,18 @@ export default function AdminDashboard() {
 
               {/* Single date (non-recurring) */}
               {!form.is_recurring && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                   <div>
-                    <label style={labelSt}>Start time <span style={{ color: 'var(--color-error)' }}>*</span></label>
-                    <input className="form-input" type="datetime-local" value={form.start_time} onChange={e => f('start_time', e.target.value)} required />
+                    <label style={labelSt}>Date <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                    <input className="form-input" type="date" value={form.event_date} onChange={e => f('event_date', e.target.value)} />
                   </div>
                   <div>
-                    <label style={labelSt}>End time</label>
-                    <input className="form-input" type="datetime-local" value={form.end_time} onChange={e => f('end_time', e.target.value)} />
+                    <label style={labelSt}>Start time <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                    <input className="form-input" type="time" value={form.start_time_only} onChange={e => f('start_time_only', e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={labelSt}>End time <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(optional)</span></label>
+                    <input className="form-input" type="time" value={form.end_time_only} onChange={e => f('end_time_only', e.target.value)} />
                   </div>
                 </div>
               )}
@@ -814,13 +817,13 @@ export default function AdminDashboard() {
 
               <Divider label="Options" />
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'end' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div>
                   <label style={labelSt}>Tags <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(comma-separated)</span></label>
                   <input className="form-input" value={form.tags} onChange={e => f('tags', e.target.value)} placeholder="e.g. produce, no ID required, drive-thru" />
                 </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', paddingBottom: '0.5rem', whiteSpace: 'nowrap' }}>
-                  <input type="checkbox" checked={form.is_active} onChange={e => f('is_active', e.target.checked)} style={{ width: 17, height: 17 }} />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none' }}>
+                  <input type="checkbox" checked={form.is_active} onChange={e => f('is_active', e.target.checked)} style={{ width: 17, height: 17, flexShrink: 0 }} />
                   <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Active (public)</span>
                 </label>
               </div>
@@ -835,7 +838,7 @@ export default function AdminDashboard() {
                 <button type="submit" disabled={saving} style={{ ...submitBtn, flex: 1 }}>
                   {saving ? 'Saving…' : editing ? 'Update Post' : 'Publish Post'}
                 </button>
-                <button type="button" className="btn-secondary" onClick={cancelEdit}>
+                <button type="button" className="btn-secondary" onClick={cancelEdit} style={{ minWidth: 100 }}>
                   {editing ? 'Cancel' : 'Clear'}
                 </button>
               </div>
@@ -843,8 +846,54 @@ export default function AdminDashboard() {
           )}
         </section>
 
-        {/* ── Map ───────────────────────────────────────────── */}
-        <div ref={mapDivRef} style={{ width: '100%', height: 340, borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--shadow-md)', border: '1px solid var(--color-border)' }} />
+        {/* ── Calendar ──────────────────────────────────────── */}
+        <section style={sectionCard}>
+          <div style={{ padding: '1.125rem 1.5rem', borderBottom: '1px solid var(--color-border)' }}>
+            <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+              📅 Event Calendar
+            </h2>
+          </div>
+          <div style={{ padding: '1rem', height: 480 }}>
+            <style>{`
+              .admin-cal .rbc-calendar { font-family: Inter, sans-serif; color: var(--color-text-primary); height: 100%; }
+              .admin-cal .rbc-toolbar { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.25rem; margin-bottom: 8px; }
+              .admin-cal .rbc-toolbar .rbc-btn-group { display: flex; flex-wrap: nowrap; gap: 2px; }
+              .admin-cal .rbc-toolbar button { color: var(--color-text-secondary); border-color: var(--color-border); background: var(--color-bg-dark); border-radius: 6px; font-size: 0.78rem; padding: 3px 10px; white-space: nowrap; cursor: pointer; }
+              .admin-cal .rbc-toolbar button:hover, .admin-cal .rbc-toolbar button.rbc-active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+              .admin-cal .rbc-toolbar-label { flex: 1; font-weight: 700; color: var(--color-text-primary); text-align: center; white-space: nowrap; }
+              .admin-cal .rbc-header { background: var(--color-bg-dark); color: var(--color-text-secondary); border-color: var(--color-border); font-size: 0.75rem; padding: 4px 0; }
+              .admin-cal .rbc-month-view, .admin-cal .rbc-agenda-view table { border-color: var(--color-border); }
+              .admin-cal .rbc-day-bg { background: var(--color-bg-medium); }
+              .admin-cal .rbc-off-range-bg { background: var(--color-bg-dark); opacity: 0.6; }
+              .admin-cal .rbc-today { background: hsla(28,95%,55%,0.08) !important; }
+              .admin-cal .rbc-event { background: var(--color-primary); border-radius: 4px; font-size: 0.72rem; border: none; padding: 1px 4px; cursor: pointer; }
+              .admin-cal .rbc-event:hover { opacity: 0.85; }
+              .admin-cal .rbc-show-more { color: var(--color-primary); font-size: 0.7rem; }
+              .admin-cal .rbc-date-cell { color: var(--color-text-secondary); font-size: 0.75rem; padding: 2px 4px; }
+              .admin-cal .rbc-date-cell.rbc-now { color: var(--color-primary); font-weight: 700; }
+              .admin-cal .rbc-month-row { min-height: 56px; }
+              .admin-cal .rbc-agenda-date-cell, .admin-cal .rbc-agenda-time-cell { color: var(--color-text-secondary); font-size: 0.82rem; }
+              .admin-cal .rbc-agenda-event-cell { color: var(--color-text-primary); font-size: 0.82rem; cursor: pointer; }
+            `}</style>
+            <div className="admin-cal" style={{ height: '100%' }}>
+              <Calendar
+                localizer={localizer}
+                events={posts.filter(p => p.start_time).map(p => ({
+                  id: p.id,
+                  title: p.title,
+                  start: new Date(p.start_time),
+                  end: p.end_time ? new Date(p.end_time) : new Date(p.start_time),
+                  resource: p,
+                }))}
+                defaultView="month"
+                views={['month', 'agenda']}
+                style={{ height: '100%' }}
+                onSelectEvent={event => startEdit(event.resource)}
+                popup
+              />
+            </div>
+          </div>
+        </section>
 
         {/* ── Posts list ────────────────────────────────────── */}
         <section style={sectionCard}>
