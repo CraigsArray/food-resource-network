@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 export default function AppAdminRoute({ children }) {
   const { session, isAppAdmin, loading } = useAuth()
 
-  if (loading) {
+  if (loading && !session) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p style={{ color: 'var(--color-text-muted)' }}>Loading…</p>
@@ -13,8 +13,9 @@ export default function AppAdminRoute({ children }) {
     )
   }
 
-  if (!session)    return <Navigate to="/login" replace />
-  if (!isAppAdmin) return <Navigate to="/admin" replace />
+  if (!session)              return <Navigate to="/login" replace />
+  if (loading)               return children  // stay mounted during membership refresh
+  if (!isAppAdmin)           return <Navigate to="/admin" replace />
 
   return children
 }

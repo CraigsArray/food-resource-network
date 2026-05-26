@@ -529,18 +529,9 @@ export default function AdminDashboard() {
 
               <Divider label="Location" />
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={labelSt}>Neighborhood</label>
-                  <select className="form-input" value={form.neighborhood} onChange={e => f('neighborhood', e.target.value)}>
-                    <option value="">Select…</option>
-                    {NEIGHBORHOODS.map(n => <option key={n} value={n}>{n}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={labelSt}>Location name</label>
-                  <input className="form-input" value={form.location_name} onChange={e => f('location_name', e.target.value)} placeholder="e.g. First Baptist Church parking lot" />
-                </div>
+              <div>
+                <label style={labelSt}>Location name</label>
+                <input className="form-input" value={form.location_name} onChange={e => f('location_name', e.target.value)} placeholder="e.g. First Baptist Church parking lot" />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '1rem' }}>
@@ -895,9 +886,6 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', flexShrink: 0 }}>
-                        <button className="btn-secondary" style={{ fontSize: '0.8rem', padding: '5px 12px' }} onClick={() => toggleActive(post)}>
-                          {post.is_active ? 'Deactivate' : 'Activate'}
-                        </button>
                         <button className="btn-secondary" style={{ fontSize: '0.8rem', padding: '5px 12px' }} onClick={() => startEdit(post)}>Edit</button>
                         <button className="btn-danger" onClick={() => deletePost(post.id)}>Delete</button>
                       </div>

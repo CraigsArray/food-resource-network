@@ -5,7 +5,7 @@ export default function ProtectedRoute({ children }) {
   const { session, loading } = useAuth()
   const location = useLocation()
 
-  if (loading) {
+  if (loading && !session) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p style={{ color: 'var(--color-text-muted)' }}>Loading…</p>
