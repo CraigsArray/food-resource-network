@@ -176,15 +176,73 @@ export default function PublicFeed() {
   }, [visibleCount])
 
   useEffect(() => {
-    supabase
+    loadPosts()
+    loadMaps()
+  }, [])
+
+  async function loadPosts() {
+    // Start of today in local time — keeps events visible all day even if they started earlier
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    const todayISO = todayStart.toISOString()
+
+    // ── 1. Non-recurring posts: only fetch today-onward (or no date = ongoing) ──
+    const { data: nonRecurring } = await supabase
       .from('posts')
       .select('*, organizations(name)')
       .eq('is_active', true)
       .eq('status', 'published')
+      .eq('is_recurring', false)
+      .or(`start_time.gte.${todayISO},start_time.is.null`)
       .order('start_time', { ascending: true, nullsFirst: false })
-      .then(({ data }) => { setPosts(data ?? []); setLoading(false) })
-    loadMaps()
-  }, [])
+
+    // ── 2. Recurring posts: fetch all, then resolve the next upcoming occurrence ──
+    const { data: recurringPosts } = await supabase
+      .from('posts')
+      .select('*, organizations(name)')
+      .eq('is_active', true)
+      .eq('status', 'published')
+      .eq('is_recurring', true)
+
+    const recurringIds = (recurringPosts ?? []).map(p => p.id)
+
+    let nextOccurrenceByPostId = {}
+    if (recurringIds.length > 0) {
+      const { data: upcomingOccs } = await supabase
+        .from('post_occurrences')
+        .select('post_id, start_time, end_time')
+        .in('post_id', recurringIds)
+        .gte('start_time', todayISO)
+        .order('start_time', { ascending: true })
+
+      // Keep only the earliest upcoming occurrence per post
+      for (const occ of (upcomingOccs ?? [])) {
+        if (!nextOccurrenceByPostId[occ.post_id]) {
+          nextOccurrenceByPostId[occ.post_id] = occ
+        }
+      }
+    }
+
+    // Map recurring posts to their next occurrence date (drop any with no future dates)
+    const recurringWithNext = (recurringPosts ?? [])
+      .filter(p => nextOccurrenceByPostId[p.id])
+      .map(p => ({
+        ...p,
+        start_time: nextOccurrenceByPostId[p.id].start_time,
+        end_time:   nextOccurrenceByPostId[p.id].end_time,
+      }))
+
+    // ── 3. Merge and sort: dated posts ascending, undated posts at the end ──
+    const merged = [...(nonRecurring ?? []), ...recurringWithNext].sort((a, b) => {
+      if (!a.start_time && !b.start_time) return 0
+      if (!a.start_time) return 1
+      if (!b.start_time) return -1
+      return new Date(a.start_time) - new Date(b.start_time)
+    })
+
+    setPosts(merged)
+    setLoading(false)
+  }
 
   // Update map style when theme toggles
   useEffect(() => {
