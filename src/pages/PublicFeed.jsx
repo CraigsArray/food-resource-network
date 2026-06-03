@@ -378,10 +378,21 @@ export default function PublicFeed() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg-dark)', transition: 'background 200ms ease' }}>
+      <style>{`
+        /* Desktop: sticky header */
+        .pub-header { position: sticky; top: 0; z-index: 100; }
+        /* Mobile: static + compact */
+        @media (max-width: 640px) {
+          .pub-header { position: static !important; }
+          .pub-header-inner { padding: 0.45rem 0.875rem !important; gap: 0.5rem !important; }
+          .pub-logo { max-height: 30px !important; }
+          .pub-subtitle, .pub-maintained { display: none !important; }
+          .pub-title { font-size: 0.95rem !important; line-height: 1.15 !important; }
+        }
+      `}</style>
 
-      {/* Header — same height in both modes, colors flip */}
-      <header style={{
-        position: 'sticky', top: 0, zIndex: 100,
+      {/* Header — sticky on desktop, static on mobile */}
+      <header className="pub-header" style={{
         background: isDark
           ? 'linear-gradient(135deg, hsl(28,95%,55%) 0%, hsl(340,82%,52%) 100%)'
           : 'var(--color-bg-dark)',
@@ -389,7 +400,7 @@ export default function PublicFeed() {
         boxShadow: isDark ? '0 2px 16px rgba(0,0,0,0.28)' : '0 1px 6px rgba(0,0,0,0.06)',
         transition: 'background 200ms ease, box-shadow 200ms ease',
       }}>
-        <div style={{ maxWidth: 960, margin: '0 auto', padding: '0.875rem 1.5rem', display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'stretch', gap: '1rem' }}>
+        <div className="pub-header-inner" style={{ maxWidth: 960, margin: '0 auto', padding: '0.875rem 1.5rem', display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'stretch', gap: '1rem' }}>
 
           {/* Left: EC Collab back arrow + logo */}
           <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.375rem' }}>
@@ -409,15 +420,15 @@ export default function PublicFeed() {
               rel="noopener noreferrer"
               style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}
             >
-              <img src="/el-cajob-collab.png" alt="El Cajon Collaborative" style={{ height: '100%', width: 'auto', objectFit: 'contain', maxHeight: 64 }} />
+              <img src="/el-cajob-collab.png" alt="El Cajon Collaborative" className="pub-logo" style={{ height: '100%', width: 'auto', objectFit: 'contain', maxHeight: 44 }} />
             </a>
           </div>
 
           {/* Center: title */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', textAlign: 'center', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{
+            <span className="pub-title" style={{
               fontFamily: 'Outfit, sans-serif', fontWeight: 800,
-              fontSize: 'clamp(1.15rem, 3vw, 1.5rem)', lineHeight: 1.2,
+              fontSize: 'clamp(1.1rem, 2.8vw, 1.4rem)', lineHeight: 1.2,
               ...(isDark
                 ? { color: 'white' }
                 : { background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }
@@ -425,10 +436,10 @@ export default function PublicFeed() {
             }}>
               East County Food Network
             </span>
-            <span style={{ fontSize: '0.78rem', color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--color-text-secondary)', lineHeight: 1.3 }}>
+            <span className="pub-subtitle" style={{ fontSize: '0.78rem', color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--color-text-secondary)', lineHeight: 1.3 }}>
               Local Food Pantries and Distributions in East County, San Diego
             </span>
-            <span style={{ fontSize: '0.72rem', color: isDark ? 'rgba(255,255,255,0.6)' : 'var(--color-text-muted)', lineHeight: 1.3 }}>
+            <span className="pub-maintained" style={{ fontSize: '0.72rem', color: isDark ? 'rgba(255,255,255,0.6)' : 'var(--color-text-muted)', lineHeight: 1.3 }}>
               Maintained by the El Cajon Collaborative
             </span>
           </div>

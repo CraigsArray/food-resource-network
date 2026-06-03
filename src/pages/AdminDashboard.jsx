@@ -65,6 +65,7 @@ export default function AdminDashboard() {
   const [formError, setFormError]     = useState('')
   const [saving, setSaving]           = useState(false)
   const [showForm, setShowForm]       = useState(true)
+  const [createProgress, setCreateProgress] = useState(null) // null | { current, total, label }
 
   // ── Recurrence pattern state ───────────────────────────────
   const [recurPattern, setRecurPattern] = useState({
@@ -294,19 +295,15 @@ export default function AdminDashboard() {
     if (!form.title.trim())       return setFormError('Title is required.')
     if (!form.description.trim()) return setFormError('Description is required.')
     if (!primaryOrgId && !isAppAdmin) return setFormError('No organization found for your account.')
-
-    if (!form.address.trim()) {
-      return setFormError('Street address is required.')
-    }
-    if (!form.is_recurring && (!form.event_date || !form.start_time_only)) {
+    if (!form.address.trim())     return setFormError('Street address is required.')
+    if (!form.is_recurring && (!form.event_date || !form.start_time_only))
       return setFormError('Event date and start time are required.')
-    }
-    if (form.is_recurring && occurrences.filter(o => o.start_time).length === 0) {
+    if (form.is_recurring && occurrences.filter(o => o.start_time).length === 0)
       return setFormError('Add at least one date for the recurring event.')
-    }
 
     setSaving(true)
 
+    // ── Image upload (shared by all paths) ──────────────────────
     let image_url = form.image_url.trim()
     if (imageMode === 'file' && imageFile) {
       const ext  = imageFile.name.split('.').pop()
@@ -318,9 +315,9 @@ export default function AdminDashboard() {
     }
 
     const coords = form.address ? await geocode(form.address) : null
-    const firstOcc = form.is_recurring ? occurrences.find(o => o.start_time) : null
 
-    const payload = {
+    // ── Base payload shared across all occurrences ───────────────
+    const basePayload = {
       organization_id: primaryOrgId,
       title:           form.title.trim(),
       description:     form.description.trim(),
@@ -329,45 +326,97 @@ export default function AdminDashboard() {
       zip:             form.zip.trim(),
       neighborhood:    form.neighborhood,
       location_name:   form.location_name.trim(),
-      start_time:      form.is_recurring ? (firstOcc?.start_time || null) : (form.event_date && form.start_time_only ? `${form.event_date}T${form.start_time_only}` : null),
-      end_time:        form.is_recurring ? (firstOcc?.end_time   || null) : (form.event_date && form.end_time_only   ? `${form.event_date}T${form.end_time_only}`   : null),
       category:        form.category,
       tags:            form.tags.split(',').map(t => t.trim()).filter(Boolean),
       image_url,
       is_active:       form.is_active,
       status:          form.status,
-      is_recurring:    form.is_recurring,
+      is_recurring:    true,
       recurrence_rule: null,
       ...(coords ?? {}),
     }
 
-    let err, postId
+    // ── EDIT path — update single post + re-sync post_occurrences ─
     if (editing) {
-      ;({ error: err } = await supabase.from('posts').update(payload).eq('id', editing))
-      postId = editing
-    } else {
-      const { data: newPost, error: insertErr } = await supabase.from('posts').insert(payload).select('id').single()
-      err    = insertErr
-      postId = newPost?.id
-    }
-
-    if (err) { setFormError(err.message); setSaving(false); return }
-
-    // Sync occurrences — delete all then re-insert for simplicity
-    await supabase.from('post_occurrences').delete().eq('post_id', postId)
-
-    if (form.is_recurring && postId) {
-      const rows = occurrences
-        .filter(o => o.start_time)
-        .map(o => ({ post_id: postId, start_time: o.start_time, end_time: o.end_time || null }))
-
-      if (rows.length > 0) {
-        const { error: occErr } = await supabase.from('post_occurrences').insert(rows)
-        if (occErr) { setFormError('Post saved but failed to save dates: ' + occErr.message); setSaving(false); return }
+      const editPayload = {
+        ...basePayload,
+        is_recurring: form.is_recurring,
+        start_time: form.is_recurring
+          ? (occurrences.find(o => o.start_time)?.start_time || null)
+          : (form.event_date && form.start_time_only ? `${form.event_date}T${form.start_time_only}` : null),
+        end_time: form.is_recurring
+          ? (occurrences.find(o => o.start_time)?.end_time || null)
+          : (form.event_date && form.end_time_only ? `${form.event_date}T${form.end_time_only}` : null),
       }
+      const { error: err } = await supabase.from('posts').update(editPayload).eq('id', editing)
+      if (err) { setFormError(err.message); setSaving(false); return }
+
+      // Re-sync post_occurrences for edited recurring post
+      await supabase.from('post_occurrences').delete().eq('post_id', editing)
+      if (form.is_recurring) {
+        const rows = occurrences
+          .filter(o => o.start_time)
+          .map(o => ({ post_id: editing, start_time: o.start_time, end_time: o.end_time || null }))
+        if (rows.length > 0) {
+          const { error: occErr } = await supabase.from('post_occurrences').insert(rows)
+          if (occErr) { setFormError('Post saved but failed to save dates: ' + occErr.message); setSaving(false); return }
+        }
+      }
+
+      setSaving(false)
+      cancelEdit()
+      loadPosts()
+      return
     }
 
+    // ── CREATE: non-recurring — single post insert ────────────────
+    if (!form.is_recurring) {
+      const payload = {
+        ...basePayload,
+        is_recurring: false,
+        start_time: form.event_date && form.start_time_only ? `${form.event_date}T${form.start_time_only}` : null,
+        end_time:   form.event_date && form.end_time_only   ? `${form.event_date}T${form.end_time_only}`   : null,
+      }
+      const { error: err } = await supabase.from('posts').insert(payload)
+      if (err) { setFormError(err.message); setSaving(false); return }
+      setSaving(false)
+      cancelEdit()
+      loadPosts()
+      return
+    }
+
+    // ── CREATE: recurring — one post row per occurrence ───────────
+    const validOccs = occurrences.filter(o => o.start_time)
+    const total     = validOccs.length
+    const errors    = []
+
+    for (let i = 0; i < validOccs.length; i++) {
+      const occ = validOccs[i]
+      // Format a readable label for the progress bar
+      const dateLabel = new Date(occ.start_time).toLocaleDateString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric',
+      })
+      const timeLabel = new Date(occ.start_time).toLocaleTimeString('en-US', {
+        hour: 'numeric', minute: '2-digit',
+      })
+      setCreateProgress({ current: i + 1, total, label: `${dateLabel} @ ${timeLabel}` })
+
+      const { error: occErr } = await supabase.from('posts').insert({
+        ...basePayload,
+        start_time: occ.start_time,
+        end_time:   occ.end_time || null,
+      })
+      if (occErr) errors.push(`Occurrence ${i + 1}: ${occErr.message}`)
+    }
+
+    setCreateProgress(null)
     setSaving(false)
+
+    if (errors.length > 0) {
+      setFormError(`${errors.length} of ${total} occurrence(s) failed: ${errors[0]}`)
+      return
+    }
+
     cancelEdit()
     loadPosts()
   }
@@ -946,6 +995,59 @@ export default function AdminDashboard() {
           </div>
         </section>
       </div>
+
+      {/* ── Recurring creation progress bar ─────────────────── */}
+      {createProgress && (
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
+          background: 'linear-gradient(135deg, hsl(220,18%,14%) 0%, hsl(220,16%,18%) 100%)',
+          borderTop: '1px solid var(--color-border)',
+          padding: '0.875rem 2rem',
+          boxShadow: '0 -4px 24px rgba(0,0,0,0.4)',
+          animation: 'slideUpBar 0.3s ease-out',
+        }}>
+          <style>{`@keyframes slideUpBar { from { transform: translateY(100%); opacity: 0 } to { transform: translateY(0); opacity: 1 } }`}</style>
+          <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, hsl(28,95%,55%), hsl(340,82%,52%))',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.75rem', flexShrink: 0,
+                  animation: 'spin 1s linear infinite',
+                }}>⟳</span>
+                <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-text-primary)' }}>
+                    Creating event {createProgress.current} of {createProgress.total}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: 1 }}>
+                    {createProgress.label}
+                  </div>
+                </div>
+              </div>
+              <span style={{
+                fontWeight: 800, fontSize: '0.95rem',
+                background: 'linear-gradient(135deg, hsl(28,95%,55%), hsl(340,82%,52%))',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>
+                {Math.round((createProgress.current / createProgress.total) * 100)}%
+              </span>
+            </div>
+            {/* Progress track */}
+            <div style={{ height: 6, background: 'var(--color-bg-dark)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: 3,
+                background: 'linear-gradient(90deg, hsl(28,95%,55%), hsl(340,82%,52%))',
+                width: `${(createProgress.current / createProgress.total) * 100}%`,
+                transition: 'width 400ms cubic-bezier(0.4,0,0.2,1)',
+                boxShadow: '0 0 8px hsla(28,95%,55%,0.6)',
+              }} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
