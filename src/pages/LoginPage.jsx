@@ -12,12 +12,14 @@ export default function LoginPage() {
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
+  const [notice, setNotice]   = useState('')
 
   if (session) return <Navigate to="/admin" replace />
 
   function reset(nextMode) {
     setMode(nextMode)
     setError('')
+    setNotice('')
     setPassword('')
     setConfirm('')
   }
@@ -163,7 +165,8 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {error && <p style={{ color: 'var(--color-error)', fontSize: '0.85rem' }}>{error}</p>}
+              {error  && <p style={{ color: 'var(--color-error)',   fontSize: '0.85rem' }}>{error}</p>}
+              {notice && <p style={{ color: 'var(--color-success)', fontSize: '0.85rem', fontWeight: 600 }}>{notice}</p>}
 
               {/* Forgot password link — only in signin mode */}
               {mode === 'signin' && (

@@ -331,7 +331,7 @@ export default function AdminDashboard() {
       image_url,
       is_active:       form.is_active,
       status:          form.status,
-      is_recurring:    true,
+      is_recurring:    form.is_recurring,
       recurrence_rule: null,
       ...(coords ?? {}),
     }

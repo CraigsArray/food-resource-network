@@ -1,13 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { Calendar, dateFnsLocalizer } from 'react-big-calendar'
-import { format, parse, startOfWeek, getDay } from 'date-fns'
-import { enUS } from 'date-fns/locale'
-import 'react-big-calendar/lib/css/react-big-calendar.css'
 
-const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { 'en-US': enUS } })
+// react-big-calendar is ~200 KB — only load it when the Calendar tab is first opened
+const CalendarPanel = lazy(() => import('../components/CalendarPanel'))
 
 const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
@@ -151,19 +148,21 @@ function Notification({ msg, onDone }) {
 export default function PublicFeed() {
   const { session, isAppAdmin, memberships } = useAuth()
   const { theme, toggleTheme } = useTheme()
-  const [posts, setPosts]       = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [expanded, setExpanded] = useState(null)
-  const [reactions, setReactions] = useState(() => {
+  const [posts, setPosts]           = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [loadError, setLoadError]   = useState('')
+  const [postDetails, setPostDetails] = useState({}) // { [id]: { description, image_url, tags } }
+  const [expanded, setExpanded]     = useState(null)
+  const [reactions, setReactions]   = useState(() => {
     try { return JSON.parse(localStorage.getItem('feedReactions') ?? '{}') } catch { return {} }
   })
-  const [toast, setToast]         = useState('')
+  const [toast, setToast]           = useState('')
   const [activeTab, setActiveTab]   = useState('map')
   const [visibleCount, setVisibleCount] = useState(50)
-  const mapRef         = useRef(null)
-  const mapDivRef      = useRef(null)
-  const markersRef     = useRef([])
-  const themeRef       = useRef(theme)
+  const mapRef           = useRef(null)
+  const mapDivRef        = useRef(null)
+  const markersRef       = useRef([])
+  const themeRef         = useRef(theme)
   const pendingScrollRef = useRef(null)
 
   useEffect(() => { themeRef.current = theme }, [theme])
@@ -181,39 +180,60 @@ export default function PublicFeed() {
   }, [])
 
   async function loadPosts() {
+    setLoadError('')
     // Start of today in local time — keeps events visible all day even if they started earlier
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)
     const todayISO = todayStart.toISOString()
 
+    // Only select columns needed for the list / map view.
+    // description, image_url, and tags are fetched on-demand when a card is expanded.
+    const LIST_COLS = 'id, title, address, city, zip, latitude, longitude, start_time, end_time, category, is_recurring, organizations(name)'
+
     // ── 1. Non-recurring posts: only fetch today-onward (or no date = ongoing) ──
-    const { data: nonRecurring } = await supabase
+    const { data: nonRecurring, error: err1 } = await supabase
       .from('posts')
-      .select('*, organizations(name)')
+      .select(LIST_COLS)
       .eq('is_active', true)
       .eq('status', 'published')
       .eq('is_recurring', false)
       .or(`start_time.gte.${todayISO},start_time.is.null`)
       .order('start_time', { ascending: true, nullsFirst: false })
 
+    if (err1) {
+      console.error('loadPosts (non-recurring):', err1)
+      setLoadError('Failed to load posts. Please refresh the page.')
+      setLoading(false)
+      return
+    }
+
     // ── 2. Recurring posts: fetch all, then resolve the next upcoming occurrence ──
-    const { data: recurringPosts } = await supabase
+    const { data: recurringPosts, error: err2 } = await supabase
       .from('posts')
-      .select('*, organizations(name)')
+      .select(LIST_COLS)
       .eq('is_active', true)
       .eq('status', 'published')
       .eq('is_recurring', true)
+
+    if (err2) {
+      console.error('loadPosts (recurring):', err2)
+      setLoadError('Failed to load recurring posts. Please refresh the page.')
+      setLoading(false)
+      return
+    }
 
     const recurringIds = (recurringPosts ?? []).map(p => p.id)
 
     let nextOccurrenceByPostId = {}
     if (recurringIds.length > 0) {
-      const { data: upcomingOccs } = await supabase
+      const { data: upcomingOccs, error: err3 } = await supabase
         .from('post_occurrences')
         .select('post_id, start_time, end_time')
         .in('post_id', recurringIds)
         .gte('start_time', todayISO)
         .order('start_time', { ascending: true })
+
+      if (err3) console.error('loadPosts (occurrences):', err3)
 
       // Keep only the earliest upcoming occurrence per post
       for (const occ of (upcomingOccs ?? [])) {
@@ -242,6 +262,18 @@ export default function PublicFeed() {
 
     setPosts(merged)
     setLoading(false)
+  }
+
+  // Lazy-load a single post's description, image, and tags the first time its card is expanded.
+  async function loadPostDetail(postId) {
+    if (postDetails[postId]) return // already cached
+    const { data, error } = await supabase
+      .from('posts')
+      .select('description, image_url, tags')
+      .eq('id', postId)
+      .single()
+    if (error) { console.error('loadPostDetail:', error); return }
+    setPostDetails(prev => ({ ...prev, [postId]: data }))
   }
 
   // Update map style when theme toggles
@@ -310,6 +342,7 @@ export default function PublicFeed() {
         }
       })
       marker.infoWindow = iw
+      marker._postId = post.id  // store ID so panTo can find the right marker even with duplicate titles
       markersRef.current.push(marker)
     })
   }, [posts, visibleCount])
@@ -318,7 +351,8 @@ export default function PublicFeed() {
     if (!mapRef.current || !post.latitude || !post.longitude) return
     mapRef.current.panTo({ lat: post.latitude, lng: post.longitude })
     mapRef.current.setZoom(15)
-    const marker = markersRef.current.find(m => m.getTitle() === post.title)
+    // Match by stored post ID, not title, to handle posts with identical names
+    const marker = markersRef.current.find(m => m._postId === post.id)
     if (marker?.infoWindow) {
       markersRef.current.forEach(m => m.infoWindow?.close())
       marker.infoWindow.open(mapRef.current, marker)
@@ -326,11 +360,13 @@ export default function PublicFeed() {
   }
 
   function toggleExpand(id) {
-    setExpanded(cur => {
-      const next = cur === id ? null : id
-      if (next) { const post = posts.find(p => p.id === next); if (post) panTo(post) }
-      return next
-    })
+    const next = expanded === id ? null : id
+    setExpanded(next)
+    if (next) {
+      const post = posts.find(p => p.id === next)
+      if (post) panTo(post)
+      loadPostDetail(next)
+    }
   }
 
   function saveReactions(next) {
@@ -492,7 +528,65 @@ export default function PublicFeed() {
           </p>
         </div>
 
+        {/* Partner organization boxes */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: '1rem',
+          marginBottom: '2rem',
+        }}>
+          {/* San Diego Food Bank */}
+          <div style={{
+            padding: '1rem 1.25rem',
+            background: 'var(--color-bg-medium)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 14,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.75rem',
+          }}>
+            <span style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🥫</span>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, margin: 0 }}>
+              The{' '}
+              <a
+                href="https://www.sandiegofoodbank.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}
+              >
+                San Diego Food Bank
+              </a>
+              {' '}distributes millions of pounds of food each year to families across San Diego County through its network of partner agencies.
+            </p>
+          </div>
+
+          {/* Feeding San Diego */}
+          <div style={{
+            padding: '1rem 1.25rem',
+            background: 'var(--color-bg-medium)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 14,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.75rem',
+          }}>
+            <span style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🍽️</span>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, margin: 0 }}>
+              <a
+                href="https://feedingsandiego.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}
+              >
+                Feeding San Diego
+              </a>
+              {' '}rescues surplus food and delivers it to community members facing hunger through a regional network of distribution sites.
+            </p>
+          </div>
+        </div>
+
         {/* Folder tabs + Map/Calendar */}
+
         <div style={{ marginBottom: '2rem' }}>
 
           {/* Tab strip */}
@@ -540,47 +634,15 @@ export default function PublicFeed() {
               }}
             />
 
-            {/* Calendar */}
+            {/* Calendar — lazy loaded; react-big-calendar only downloads on first tab click */}
             {activeTab === 'calendar' && (
-              <div style={{ height: 560, background: 'var(--color-bg-medium)', padding: '0.75rem' }}>
-                <style>{`
-                  .rbc-calendar { font-family: Inter, sans-serif; color: var(--color-text-primary); }
-                  .rbc-toolbar { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.25rem; margin-bottom: 6px; }
-                  .rbc-toolbar .rbc-btn-group { display: flex; flex-wrap: nowrap; gap: 2px; }
-                  .rbc-toolbar button { color: var(--color-text-secondary); border-color: var(--color-border); background: var(--color-bg-dark); border-radius: 8px; font-size: 0.78rem; padding: 3px 10px; white-space: nowrap; }
-                  .rbc-toolbar button:hover, .rbc-toolbar button.rbc-active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
-                  .rbc-toolbar-label { flex: 1; font-weight: 700; color: var(--color-text-primary); text-align: center; white-space: nowrap; }
-                  .rbc-header { background: var(--color-bg-dark); color: var(--color-text-secondary); border-color: var(--color-border); font-size: 0.78rem; padding: 4px 0; }
-                  .rbc-month-view, .rbc-agenda-view table { border-color: var(--color-border); }
-                  .rbc-day-bg { background: var(--color-bg-medium); }
-                  .rbc-off-range-bg { background: var(--color-bg-dark); opacity: 0.6; }
-                  .rbc-today { background: hsla(28,95%,55%,0.08) !important; }
-                  .rbc-event { background: var(--color-primary); border-radius: 4px; font-size: 0.72rem; border: none; padding: 1px 4px; }
-                  .rbc-show-more { color: var(--color-primary); font-size: 0.72rem; }
-                  .rbc-date-cell { color: var(--color-text-secondary); font-size: 0.78rem; padding: 2px 4px; }
-                  .rbc-date-cell.rbc-now { color: var(--color-primary); font-weight: 700; }
-                  .rbc-agenda-date-cell, .rbc-agenda-time-cell { color: var(--color-text-secondary); font-size: 0.82rem; }
-                  .rbc-agenda-event-cell { color: var(--color-text-primary); font-size: 0.82rem; }
-                  .rbc-row-segment .rbc-event-content { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                  .rbc-month-row { min-height: 60px; }
-                `}</style>
-                <Calendar
-                  localizer={localizer}
-                  events={posts.filter(p => p.start_time).map(p => ({
-                    id:       p.id,
-                    title:    p.title,
-                    start:    new Date(p.start_time),
-                    end:      p.end_time ? new Date(p.end_time) : new Date(p.start_time),
-                    resource: p,
-                  }))}
-                  defaultView="month"
-                  views={['month', 'agenda']}
-                  style={{ height: '100%' }}
-                  onSelectEvent={handleCalendarEventClick}
-                  components={{ event: CalendarEvent }}
-                  popup
-                />
-              </div>
+              <Suspense fallback={
+                <div style={{ height: 560, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-medium)' }}>
+                  <p style={{ color: 'var(--color-text-muted)' }}>Loading calendar…</p>
+                </div>
+              }>
+                <CalendarPanel posts={posts} onSelectEvent={handleCalendarEventClick} />
+              </Suspense>
             )}
           </div>
         </div>
@@ -596,6 +658,8 @@ export default function PublicFeed() {
 
         {loading ? (
           <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '3rem' }}>Loading resources…</p>
+        ) : loadError ? (
+          <p style={{ color: 'var(--color-error)', textAlign: 'center', padding: '3rem' }}>{loadError}</p>
         ) : posts.length === 0 ? (
           <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '3rem' }}>📭 No active posts yet.</p>
         ) : (() => {
@@ -682,19 +746,27 @@ export default function PublicFeed() {
                             </p>
                           )}
 
-                          {/* Expanded content */}
+                          {/* Expanded content — details loaded on-demand to reduce initial bandwidth */}
                           {isOpen && (
                             <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid var(--color-border)` }}>
-                              {post.description && (
-                                <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.7, marginBottom: '0.75rem', fontSize: '0.9rem' }}>{post.description}</p>
-                              )}
-                              <PostAttachment url={post.image_url} title={post.title} />
-                              {post.tags?.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.5rem' }}>
-                                  {post.tags.map(t => (
-                                    <span key={t} style={{ padding: '3px 12px', background: 'var(--color-surface)', borderRadius: 12, fontSize: '0.75rem', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>{t}</span>
-                                  ))}
-                                </div>
+                              {!postDetails[post.id] ? (
+                                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>Loading details…</p>
+                              ) : (
+                                <>
+                                  {postDetails[post.id].description && (
+                                    <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.7, marginBottom: '0.75rem', fontSize: '0.9rem' }}>
+                                      {postDetails[post.id].description}
+                                    </p>
+                                  )}
+                                  <PostAttachment url={postDetails[post.id].image_url} title={post.title} />
+                                  {postDetails[post.id].tags?.length > 0 && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.5rem' }}>
+                                      {postDetails[post.id].tags.map(t => (
+                                        <span key={t} style={{ padding: '3px 12px', background: 'var(--color-surface)', borderRadius: 12, fontSize: '0.75rem', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>{t}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           )}
@@ -807,21 +879,7 @@ export default function PublicFeed() {
   )
 }
 
-function CalendarEvent({ event }) {
-  const post = event.resource
-  return (
-    <div style={{ lineHeight: 1.3, overflow: 'hidden' }}>
-      <div style={{ fontWeight: 600, fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {event.title}
-      </div>
-      {post?.address && (
-        <div style={{ fontSize: '0.67rem', opacity: 0.85, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          📍 {post.address}
-        </div>
-      )}
-    </div>
-  )
-}
+// CalendarEvent has moved to src/components/CalendarPanel.jsx
 
 const darkHeaderLinkStyle = {
   background: 'rgba(255,255,255,0.2)',
