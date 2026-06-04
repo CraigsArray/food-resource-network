@@ -23,8 +23,11 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install script dependencies
+        # Only install what the sync script actually needs.
+        # Avoids npm ci lock-file sync issues caused by platform-specific
+        # native packages (e.g. Playwright binaries) in the Windows-generated lock file.
+        run: npm install @supabase/supabase-js
 
       - name: Run sync script
         env:
