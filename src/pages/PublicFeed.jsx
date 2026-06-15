@@ -188,7 +188,7 @@ export default function PublicFeed() {
 
     // Only select columns needed for the list / map view.
     // description, image_url, and tags are fetched on-demand when a card is expanded.
-    const LIST_COLS = 'id, title, address, city, zip, latitude, longitude, start_time, end_time, category, is_recurring, organizations(name)'
+    const LIST_COLS = 'id, title, address, city, zip, latitude, longitude, start_time, end_time, category, is_recurring, created_at, organizations(name)'
 
     // ── 1. Non-recurring posts: only fetch today-onward (or no date = ongoing) ──
     const { data: nonRecurring, error: err1 } = await supabase
@@ -718,13 +718,18 @@ export default function PublicFeed() {
 
                           {/* Date/time — prominent, below title */}
                           {post.start_time && (
-                            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-primary)', marginBottom: '0.4rem' }}>
-                              🕐 {new Date(post.start_time).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                              {post.end_time ? ` – ${new Date(post.end_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : ''}
+                            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexWrap: 'wrap' }}>
+                              <span>
+                                🕐 {new Date(post.start_time).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                {post.end_time ? ` – ${new Date(post.end_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : ''}
+                              </span>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-text-muted)' }}>
+                                {new Date(post.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                              </span>
                             </p>
                           )}
 
-                          {/* Provider + category + time ago */}
+                          {/* Provider + category */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: post.address ? '0.3rem' : 0 }}>
                             <span style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--color-text-secondary)' }}>
                               {orgName || 'Anonymous'}
@@ -732,11 +737,6 @@ export default function PublicFeed() {
                             <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: '0.68rem', fontWeight: 700, background: `${color}22`, color, border: `1px solid ${color}44` }}>
                               {post.category ?? 'food'}
                             </span>
-                            {post.start_time && (
-                              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-                                {new Date(post.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                              </span>
-                            )}
                           </div>
 
                           {/* Address */}
@@ -802,22 +802,30 @@ export default function PublicFeed() {
                           >
                             {r.reported ? '⚠️ Reported' : '!'}
                           </button>
-                          {post.address && (
-                            <a
-                              href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent([post.address, post.city, post.zip].filter(Boolean).join(', '))}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                marginLeft: 'auto', padding: '4px 14px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600,
-                                border: '1px solid var(--color-border)', background: 'var(--color-surface)',
-                                color: 'var(--color-text-muted)', textDecoration: 'none', transition: 'all 150ms',
-                              }}
-                              onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-primary)'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = 'var(--color-primary)' }}
-                              onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-surface)'; e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.borderColor = 'var(--color-border)' }}
-                            >
-                              🗺️ Directions
-                            </a>
-                          )}
+                          {/* Created label + Directions — grouped right */}
+                          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
+                            {post.created_at && (
+                              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                                Post created {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </span>
+                            )}
+                            {post.address && (
+                              <a
+                                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent([post.address, post.city, post.zip].filter(Boolean).join(', '))}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  padding: '4px 14px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600,
+                                  border: '1px solid var(--color-border)', background: 'var(--color-surface)',
+                                  color: 'var(--color-text-muted)', textDecoration: 'none', transition: 'all 150ms',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-primary)'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = 'var(--color-primary)' }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-surface)'; e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.borderColor = 'var(--color-border)' }}
+                              >
+                                🗺️ Directions
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </article>
                     )

@@ -1,0 +1,37 @@
+name: Sync San Diego Food Bank
+
+# Runs at 8:00 AM Pacific (15:00 UTC) on the 1st and 15th of every month.
+# Offset by 30 minutes from the Feeding SD workflow to avoid parallel runs.
+# Can also be triggered manually from the Actions tab at any time.
+on:
+  schedule:
+    - cron: '30 15 1,15 * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    name: Fetch & upsert SD Food Bank locations
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install script dependencies
+        # Only install what the sync script actually needs.
+        # Avoids npm ci lock-file sync issues caused by platform-specific
+        # native packages (e.g. Playwright binaries) in the Windows-generated lock file.
+        run: npm install @supabase/supabase-js
+
+      - name: Run sync script
+        env:
+          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY:            ${{ secrets.OPENAI_API_KEY }}
+        run: node scripts/syncSdFoodBank.js
