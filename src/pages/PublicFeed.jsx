@@ -256,14 +256,25 @@ export default function PublicFeed() {
       }
     }
 
-    // Map recurring posts to their next occurrence date (drop any with no future dates)
-    const recurringWithNext = (recurringPosts ?? [])
-      .filter(p => nextOccurrenceByPostId[p.id])
-      .map(p => ({
-        ...p,
-        start_time: nextOccurrenceByPostId[p.id].start_time,
-        end_time:   nextOccurrenceByPostId[p.id].end_time,
-      }))
+    // Resolve each recurring post to its display date. Two models exist:
+    //   • "Series" model: one post row whose own start_time may be in the past,
+    //     but future dates live in post_occurrences (e.g. Weekly Food Distribution).
+    //     → Use the next post_occurrences date.
+    //   • "Individual-occurrence" model: the admin form inserts one row per date,
+    //     each with is_recurring=true and its own start_time (no post_occurrences rows).
+    //     → Use the post's own start_time if it's today-or-future.
+    //   • Anything with no future occurrence in either place → drop.
+    const recurringWithNext = (recurringPosts ?? []).flatMap(p => {
+      if (nextOccurrenceByPostId[p.id]) {
+        // Series model — override with the next post_occurrences date
+        return [{ ...p, start_time: nextOccurrenceByPostId[p.id].start_time, end_time: nextOccurrenceByPostId[p.id].end_time }]
+      }
+      if (p.start_time && new Date(p.start_time) >= new Date(todayISO)) {
+        // Individual-occurrence model — use the post's own date if today-or-future
+        return [p]
+      }
+      return [] // past with no future occurrences — drop
+    })
 
     // ── 3. Merge and sort: dated posts ascending, undated posts at the end ──
     const merged = [...(nonRecurring ?? []), ...recurringWithNext].sort((a, b) => {
@@ -612,18 +623,18 @@ export default function PublicFeed() {
               flexDirection: 'column',
               gap: '0.75rem',
             }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)' }}>County Resources</span>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
-                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🥫</span>
-                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0 }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)', textAlign: 'center' }}>Reliable Food Providers</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0 }}>🥫</span>
+                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
                   <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>San Diego Food Bank</a>
                   {' '}— county-wide food distributions and pantries.
                 </p>
               </div>
               <div style={{ height: 1, background: 'var(--color-border)' }} />
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
-                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🍽️</span>
-                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0 }}>🍽️</span>
+                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
                   <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>Feeding San Diego</a>
                   {' '}— surplus food rescue and regional distribution sites.
                 </p>
@@ -642,18 +653,18 @@ export default function PublicFeed() {
             gap: '0.75rem',
             marginBottom: '2rem',
           }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)' }}>County Resources</span>
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', flex: '1 1 200px' }}>
-                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🥫</span>
-                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0 }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)', textAlign: 'center' }}>Reliable Food Providers</span>
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: '1 1 200px', justifyContent: 'center' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0 }}>🥫</span>
+                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
                   <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>San Diego Food Bank</a>
                   {' '}— county-wide food distributions and pantries.
                 </p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', flex: '1 1 200px' }}>
-                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🍽️</span>
-                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: '1 1 200px', justifyContent: 'center' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0 }}>🍽️</span>
+                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
                   <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>Feeding San Diego</a>
                   {' '}— surplus food rescue and regional distribution sites.
                 </p>
