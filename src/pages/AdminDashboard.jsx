@@ -82,7 +82,17 @@ export default function AdminDashboard() {
   const of  = (key, val) => setOrgForm(prev => ({ ...prev, [key]: val }))
   const rpf = (key, val) => setRecurPattern(prev => ({ ...prev, [key]: val }))
 
-  useEffect(() => { loadPosts(); loadMapsApi() }, [])
+  // ── Pinned announcement state (app admins only) ────────────
+  const [pinnedPost, setPinnedPost]               = useState(null)
+  const [pinnedForm, setPinnedForm]               = useState({ title: '', description: '', posted_date: new Date().toISOString().split('T')[0], link_url: '' })
+  const [showPinnedSection, setShowPinnedSection] = useState(true)
+  const [pinnedSaving, setPinnedSaving]           = useState(false)
+  const [pinnedRemoving, setPinnedRemoving]       = useState(false)
+  const [pinnedError, setPinnedError]             = useState('')
+  const [pinnedSuccess, setPinnedSuccess]         = useState(false)
+  const ppf = (key, val) => setPinnedForm(prev => ({ ...prev, [key]: val }))
+
+  useEffect(() => { loadPosts(); loadMapsApi(); loadPinnedPost() }, [])
   useEffect(() => { if (primaryOrgId) loadOrgData(primaryOrgId) }, [primaryOrgId])
   useEffect(() => { if (profile) setProfileForm({ full_name: profile.full_name ?? '' }) }, [profile])
 
@@ -156,6 +166,60 @@ export default function AdminDashboard() {
     const { data } = await q
     setPosts(data ?? [])
     setLoading(false)
+  }
+
+  // ── Pinned announcement ────────────────────────────────────
+  async function loadPinnedPost() {
+    // Admin RLS (FOR ALL) lets authenticated admins see all rows including inactive ones.
+    // Get the single most-recent pinned post so the form pre-fills correctly.
+    const { data } = await supabase
+      .from('pinned_posts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    setPinnedPost(data ?? null)
+    if (data) {
+      setPinnedForm({
+        title:       data.title,
+        description: data.description ?? '',
+        posted_date: data.posted_date,
+        link_url:    data.link_url ?? '',
+      })
+    }
+  }
+
+  async function handlePinnedSave(e) {
+    e.preventDefault()
+    if (!pinnedForm.title.trim()) { setPinnedError('Title is required.'); return }
+    setPinnedSaving(true)
+    setPinnedError('')
+    const payload = {
+      title:       pinnedForm.title.trim(),
+      description: pinnedForm.description.trim() || null,
+      posted_date: pinnedForm.posted_date,
+      link_url:    pinnedForm.link_url.trim() || null,
+      is_active:   true,
+    }
+    const { error } = pinnedPost
+      ? await supabase.from('pinned_posts').update(payload).eq('id', pinnedPost.id)
+      : await supabase.from('pinned_posts').insert(payload)
+    setPinnedSaving(false)
+    if (error) { setPinnedError(error.message); return }
+    setPinnedSuccess(true)
+    setTimeout(() => setPinnedSuccess(false), 3000)
+    loadPinnedPost()
+  }
+
+  async function handlePinnedRemove() {
+    if (!pinnedPost) return
+    if (!confirm('Remove the pinned announcement from the public feed?\n\nIt will be deactivated but not deleted — you can republish it by saving again.')) return
+    setPinnedRemoving(true)
+    await supabase.from('pinned_posts').update({ is_active: false }).eq('id', pinnedPost.id)
+    setPinnedRemoving(false)
+    // Clear form so it reads as "no active post"
+    setPinnedPost(prev => prev ? { ...prev, is_active: false } : null)
+    setPinnedSuccess(false)
   }
 
   function loadMapsApi() {
@@ -895,7 +959,72 @@ export default function AdminDashboard() {
           )}
         </section>
 
-        {/* ── Calendar ──────────────────────────────────────── */}
+        {/* ── Section 4: Pinned Announcement (app admins only) ─ */}
+        {isAppAdmin && (
+          <section style={sectionCard}>
+            <SectionHeader
+              title="Pinned Announcement"
+              icon="📌"
+              open={showPinnedSection}
+              onToggle={() => setShowPinnedSection(v => !v)}
+            />
+            {showPinnedSection && (
+              <form onSubmit={handlePinnedSave} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+                {/* Active / inactive status + remove button */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: pinnedPost?.is_active ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
+                    {pinnedPost?.is_active
+                      ? '🟢 Active — currently visible on the public feed'
+                      : '⚪ No active pinned announcement'}
+                  </span>
+                  {pinnedPost?.is_active && (
+                    <button
+                      type="button"
+                      disabled={pinnedRemoving}
+                      onClick={handlePinnedRemove}
+                      style={{ fontSize: '0.78rem', padding: '4px 12px', borderRadius: 8, border: '1px solid var(--color-error)', background: 'transparent', color: 'var(--color-error)', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      {pinnedRemoving ? 'Removing…' : '✕ Remove from feed'}
+                    </button>
+                  )}
+                </div>
+
+                <Divider label="Content" />
+
+                <div>
+                  <label style={labelSt}>Title <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                  <input className="form-input" required value={pinnedForm.title} onChange={e => ppf('title', e.target.value)} placeholder="e.g. June Food Drive — Urgent Need" />
+                </div>
+
+                <div>
+                  <label style={labelSt}>Description</label>
+                  <textarea className="form-input" rows={4} value={pinnedForm.description} onChange={e => ppf('description', e.target.value)} placeholder="Details, context, or a call to action for visitors…" style={{ resize: 'vertical' }} />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={labelSt}>Posted Date</label>
+                    <input className="form-input" type="date" value={pinnedForm.posted_date} onChange={e => ppf('posted_date', e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={labelSt}>Link / Attachment URL</label>
+                    <input className="form-input" type="url" value={pinnedForm.link_url} onChange={e => ppf('link_url', e.target.value)} placeholder="https://…" />
+                  </div>
+                </div>
+
+                {pinnedError   && <p style={{ color: 'var(--color-error)',   fontSize: '0.85rem', fontWeight: 600 }}>{pinnedError}</p>}
+                {pinnedSuccess && <p style={{ color: 'var(--color-success)', fontSize: '0.85rem', fontWeight: 600 }}>✓ Saved — live on the public feed.</p>}
+
+                <div>
+                  <button type="submit" disabled={pinnedSaving} style={submitBtn}>
+                    {pinnedSaving ? 'Saving…' : pinnedPost?.is_active ? '📌 Update Announcement' : '📌 Publish Announcement'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </section>
+        )}
         <section style={sectionCard}>
           <div style={{ padding: '1.125rem 1.5rem', borderBottom: '1px solid var(--color-border)' }}>
             <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>

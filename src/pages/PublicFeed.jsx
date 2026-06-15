@@ -159,6 +159,7 @@ export default function PublicFeed() {
   const [toast, setToast]           = useState('')
   const [activeTab, setActiveTab]   = useState('map')
   const [visibleCount, setVisibleCount] = useState(50)
+  const [pinnedPost, setPinnedPost]     = useState(null)
   const mapRef           = useRef(null)
   const mapDivRef        = useRef(null)
   const markersRef       = useRef([])
@@ -177,7 +178,19 @@ export default function PublicFeed() {
   useEffect(() => {
     loadPosts()
     loadMaps()
+    loadPinnedPost()
   }, [])
+
+  async function loadPinnedPost() {
+    const { data } = await supabase
+      .from('pinned_posts')
+      .select('id, title, description, posted_date, link_url')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    setPinnedPost(data ?? null)
+  }
 
   async function loadPosts() {
     setLoadError('')
@@ -528,62 +541,126 @@ export default function PublicFeed() {
           </p>
         </div>
 
-        {/* Partner organization boxes */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-          gap: '1rem',
-          marginBottom: '2rem',
-        }}>
-          {/* San Diego Food Bank */}
+        {/* Pinned announcement + partner org links */}
+        {pinnedPost ? (
+          /* Two-column: pinned card left, partner orgs right */
           <div style={{
-            padding: '1rem 1.25rem',
-            background: 'var(--color-bg-medium)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 14,
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '0.75rem',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: '1rem',
+            marginBottom: '2rem',
           }}>
-            <span style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🥫</span>
-            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, margin: 0 }}>
-              The{' '}
-              <a
-                href="https://www.sandiegofoodbank.org"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}
-              >
-                San Diego Food Bank
-              </a>
-              {' '}distributes millions of pounds of food each year to families across San Diego County through its network of partner agencies.
-            </p>
-          </div>
 
-          {/* Feeding San Diego */}
+            {/* Left: Pinned announcement card */}
+            <div style={{
+              padding: '1.25rem',
+              background: isDark ? 'hsla(28,95%,55%,0.07)' : 'hsla(28,95%,55%,0.05)',
+              border: '1px solid hsla(28,95%,55%,0.28)',
+              borderRadius: 14,
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+            }}>
+              {/* Posted date — small, top-right corner */}
+              <span style={{
+                position: 'absolute', top: '0.75rem', right: '1rem',
+                fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 500,
+              }}>
+                {new Date(pinnedPost.posted_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ fontSize: '1rem' }}>📌</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--color-primary)' }}>Pinned</span>
+              </div>
+              <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.3, paddingRight: '5rem' }}>
+                {pinnedPost.link_url ? (
+                  <a
+                    href={pinnedPost.link_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--color-text-primary)', textDecoration: 'none' }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-primary)'}
+                  >{pinnedPost.title}</a>
+                ) : pinnedPost.title}
+              </p>
+              {pinnedPost.description && (
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.6 }}>
+                  {pinnedPost.description}
+                </p>
+              )}
+              {pinnedPost.link_url && (
+                <a
+                  href={pinnedPost.link_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none', marginTop: 'auto', paddingTop: '0.25rem' }}
+                >
+                  Learn more →
+                </a>
+              )}
+            </div>
+
+            {/* Right: Combined partner orgs box */}
+            <div style={{
+              padding: '1rem 1.25rem',
+              background: 'var(--color-bg-medium)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 14,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+            }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)' }}>County Resources</span>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🥫</span>
+                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                  <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>San Diego Food Bank</a>
+                  {' '}— county-wide food distributions and pantries.
+                </p>
+              </div>
+              <div style={{ height: 1, background: 'var(--color-border)' }} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🍽️</span>
+                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                  <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>Feeding San Diego</a>
+                  {' '}— surplus food rescue and regional distribution sites.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* No pinned post — partner orgs full-width, both orgs side by side */
           <div style={{
             padding: '1rem 1.25rem',
             background: 'var(--color-bg-medium)',
             border: '1px solid var(--color-border)',
             borderRadius: 14,
             display: 'flex',
-            alignItems: 'flex-start',
+            flexDirection: 'column',
             gap: '0.75rem',
+            marginBottom: '2rem',
           }}>
-            <span style={{ fontSize: '1.4rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🍽️</span>
-            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, margin: 0 }}>
-              <a
-                href="https://feedingsandiego.org"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}
-              >
-                Feeding San Diego
-              </a>
-              {' '}rescues surplus food and delivers it to community members facing hunger through a regional network of distribution sites.
-            </p>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)' }}>County Resources</span>
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', flex: '1 1 200px' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🥫</span>
+                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                  <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>San Diego Food Bank</a>
+                  {' '}— county-wide food distributions and pantries.
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', flex: '1 1 200px' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🍽️</span>
+                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                  <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>Feeding San Diego</a>
+                  {' '}— surplus food rescue and regional distribution sites.
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Folder tabs + Map/Calendar */}
 
