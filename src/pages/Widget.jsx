@@ -97,6 +97,14 @@ function PostRow({ post }) {
               {post.description}
             </p>
           )}
+          {post.organizer_phone && (
+            <p style={{ fontSize: '0.85rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span>📞</span>
+              <a href={`tel:${post.organizer_phone}`} style={{ color: 'var(--color-accent)', fontWeight: 600, textDecoration: 'none' }} onClick={e => e.stopPropagation()}>
+                {post.organizer_phone}
+              </a>
+            </p>
+          )}
           {post.tags?.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginBottom: '0.5rem' }}>
               {post.tags.map(t => (

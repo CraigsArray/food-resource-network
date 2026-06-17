@@ -504,6 +504,14 @@ export default function IframeFeed() {
                                 {post.description && (
                                   <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.65, marginBottom: '0.625rem', fontSize: '0.875rem' }}>{post.description}</p>
                                 )}
+                                {post.organizer_phone && (
+                                  <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <span>📞</span>
+                                    <a href={`tel:${post.organizer_phone}`} style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 600 }} onClick={e => e.stopPropagation()}>
+                                      {post.organizer_phone}
+                                    </a>
+                                  </p>
+                                )}
                                 <PostAttachment url={post.image_url} title={post.title} />
                                 {post.tags?.length > 0 && (
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.375rem' }}>

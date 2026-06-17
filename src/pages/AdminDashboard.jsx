@@ -31,7 +31,7 @@ const EMPTY_FORM = {
   event_date: '', start_time_only: '', end_time_only: '',
   category: 'food-pantry', tags: '', image_url: '',
   is_active: true, status: 'published', neighborhood: '', location_name: '',
-  is_recurring: false,
+  is_recurring: false, organizer_phone: '',
 }
 
 function newOccurrence() {
@@ -328,6 +328,7 @@ export default function AdminDashboard() {
       neighborhood:  post.neighborhood  ?? '',
       location_name: post.location_name ?? '',
       is_recurring:  post.is_recurring  ?? false,
+      organizer_phone: post.organizer_phone ?? '',
     })
     if (post.image_url) setImagePreview(post.image_url)
     setImageMode('url')
@@ -400,6 +401,7 @@ export default function AdminDashboard() {
       status:          form.status,
       is_recurring:    form.is_recurring,
       recurrence_rule: null,
+      organizer_phone: form.organizer_phone.trim() || null,
       ...(coords ?? {}),
     }
 
@@ -691,6 +693,11 @@ export default function AdminDashboard() {
               <div>
                 <label style={labelSt}>Description <span style={{ color: 'var(--color-error)' }}>*</span></label>
                 <textarea className="form-input" rows={4} required value={form.description} onChange={e => f('description', e.target.value)} placeholder="What's available, pickup instructions, requirements…" style={{ resize: 'vertical' }} />
+              </div>
+
+              <div>
+                <label style={labelSt}>Organizer Phone Number</label>
+                <input className="form-input" type="tel" value={form.organizer_phone} onChange={e => f('organizer_phone', e.target.value)} placeholder="e.g. (619) 555-0123" />
               </div>
 
               <Divider label="Location" />

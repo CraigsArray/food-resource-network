@@ -287,7 +287,7 @@ export default function PublicFeed() {
     if (postDetails[postId]) return // already cached
     const { data, error } = await supabase
       .from('posts')
-      .select('description, image_url, tags')
+      .select('description, image_url, tags, organizer_phone')
       .eq('id', postId)
       .single()
     if (error) { console.error('loadPostDetail:', error); return }
@@ -874,6 +874,14 @@ export default function PublicFeed() {
                                   {postDetails[post.id].description && (
                                     <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.7, marginBottom: '0.75rem', fontSize: '0.9rem' }}>
                                       {postDetails[post.id].description}
+                                    </p>
+                                  )}
+                                  {postDetails[post.id].organizer_phone && (
+                                    <p style={{ fontSize: '0.88rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                      <span>📞</span>
+                                      <a href={`tel:${postDetails[post.id].organizer_phone}`} style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 600 }} onClick={e => e.stopPropagation()}>
+                                        {postDetails[post.id].organizer_phone}
+                                      </a>
                                     </p>
                                   )}
                                   <PostAttachment url={postDetails[post.id].image_url} title={post.title} />
