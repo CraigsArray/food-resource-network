@@ -92,6 +92,12 @@ export default function AdminDashboard() {
   const [pinnedSuccess, setPinnedSuccess]         = useState(false)
   const ppf = (key, val) => setPinnedForm(prev => ({ ...prev, [key]: val }))
 
+  // ── Series / recurring-edit state ────────────────────────────
+  // null = no modal open; { mode: 'edit'|'delete', post } = choice pending
+  const [seriesModal,    setSeriesModal]    = useState(null)
+  // 'single' = edit/update just this row; 'series' = apply to all future in series
+  const [editingScope,   setEditingScope]   = useState('single')
+
   useEffect(() => { loadPosts(); loadMapsApi(); loadPinnedPost() }, [])
   useEffect(() => { if (primaryOrgId) loadOrgData(primaryOrgId) }, [primaryOrgId])
   useEffect(() => { if (profile) setProfileForm({ full_name: profile.full_name ?? '' }) }, [profile])
@@ -319,26 +325,14 @@ export default function AdminDashboard() {
     if (post.image_url) setImagePreview(post.image_url)
     setImageMode('url')
 
-    if (post.is_recurring) {
-      const { data: occ } = await supabase
-        .from('post_occurrences')
-        .select('id, start_time, end_time')
-        .eq('post_id', post.id)
-        .order('start_time', { ascending: true })
-
-      setOccurrences(
-        occ && occ.length > 0
-          ? occ.map(o => ({
-              _key:       o.id,
-              id:         o.id,
-              start_time: o.start_time ? o.start_time.slice(0, 16) : '',
-              end_time:   o.end_time   ? o.end_time.slice(0, 16)   : '',
-            }))
-          : [newOccurrence()]
-      )
-    } else {
-      setOccurrences([newOccurrence()])
-    }
+    // Individual-occurrence model: each post row has its own start_time.
+    // Pre-fill the occurrences editor with this post's current date.
+    setOccurrences([{
+      _key:       crypto.randomUUID(),
+      id:         null,
+      start_time: post.start_time ? post.start_time.slice(0, 16) : '',
+      end_time:   post.end_time   ? post.end_time.slice(0, 16)   : '',
+    }])
 
     setShowForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -346,6 +340,8 @@ export default function AdminDashboard() {
 
   function cancelEdit() {
     setEditing(null)
+    setEditingScope('single')
+    setSeriesModal(null)
     setForm(EMPTY_FORM)
     setOccurrences([newOccurrence()])
     setFormError('')
@@ -400,32 +396,36 @@ export default function AdminDashboard() {
       ...(coords ?? {}),
     }
 
-    // ── EDIT path — update single post + re-sync post_occurrences ─
+    // ── EDIT path — series-aware ────────────────────────────────
     if (editing) {
-      const editPayload = {
-        ...basePayload,
-        is_recurring: form.is_recurring,
-        start_time: form.is_recurring
-          ? (occurrences.find(o => o.start_time)?.start_time || null)
-          : (form.event_date && form.start_time_only ? `${form.event_date}T${form.start_time_only}` : null),
-        end_time: form.is_recurring
-          ? (occurrences.find(o => o.start_time)?.end_time || null)
-          : (form.event_date && form.end_time_only ? `${form.event_date}T${form.end_time_only}` : null),
-      }
-      const { error: err } = await supabase.from('posts').update(editPayload).eq('id', editing)
-      if (err) { setFormError(err.message); setSaving(false); return }
+      let err
 
-      // Re-sync post_occurrences for edited recurring post
-      await supabase.from('post_occurrences').delete().eq('post_id', editing)
-      if (form.is_recurring) {
-        const rows = occurrences
-          .filter(o => o.start_time)
-          .map(o => ({ post_id: editing, start_time: o.start_time, end_time: o.end_time || null }))
-        if (rows.length > 0) {
-          const { error: occErr } = await supabase.from('post_occurrences').insert(rows)
-          if (occErr) { setFormError('Post saved but failed to save dates: ' + occErr.message); setSaving(false); return }
+      if (editingScope === 'series') {
+        // Update all FUTURE posts in the series (title, description, address, etc.).
+        // Each post keeps its own individual start_time/end_time — dates are NOT changed.
+        const editingPost = posts.find(p => p.id === editing)
+        const todayISO    = new Date().toISOString()
+        ;({ error: err } = await supabase
+          .from('posts')
+          .update(basePayload)
+          .eq('series_id', editingPost?.series_id ?? editing)
+          .gte('start_time', todayISO)
+        )
+      } else {
+        // Update just this one post, including its specific date.
+        const singlePayload = {
+          ...basePayload,
+          start_time: form.is_recurring
+            ? (occurrences.find(o => o.start_time)?.start_time || null)
+            : (form.event_date && form.start_time_only ? `${form.event_date}T${form.start_time_only}` : null),
+          end_time: form.is_recurring
+            ? (occurrences.find(o => o.start_time)?.end_time || null)
+            : (form.event_date && form.end_time_only ? `${form.event_date}T${form.end_time_only}` : null),
         }
+        ;({ error: err } = await supabase.from('posts').update(singlePayload).eq('id', editing))
       }
+
+      if (err) { setFormError(err.message); setSaving(false); return }
 
       setSaving(false)
       cancelEdit()
@@ -449,24 +449,22 @@ export default function AdminDashboard() {
       return
     }
 
-    // ── CREATE: recurring — one post row per occurrence ───────────
+    // ── CREATE: recurring — one post row per occurrence, all sharing a series_id ──
+    // Generate one UUID for the whole batch so occurrences can be edited/deleted together.
+    const batchSeriesId = crypto.randomUUID()
     const validOccs = occurrences.filter(o => o.start_time)
     const total     = validOccs.length
     const errors    = []
 
     for (let i = 0; i < validOccs.length; i++) {
       const occ = validOccs[i]
-      // Format a readable label for the progress bar
-      const dateLabel = new Date(occ.start_time).toLocaleDateString('en-US', {
-        weekday: 'short', month: 'short', day: 'numeric',
-      })
-      const timeLabel = new Date(occ.start_time).toLocaleTimeString('en-US', {
-        hour: 'numeric', minute: '2-digit',
-      })
+      const dateLabel = new Date(occ.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+      const timeLabel = new Date(occ.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       setCreateProgress({ current: i + 1, total, label: `${dateLabel} @ ${timeLabel}` })
 
       const { error: occErr } = await supabase.from('posts').insert({
         ...basePayload,
+        series_id:  batchSeriesId,
         start_time: occ.start_time,
         end_time:   occ.end_time || null,
       })
@@ -494,6 +492,40 @@ export default function AdminDashboard() {
   async function toggleActive(post) {
     await supabase.from('posts').update({ is_active: !post.is_active }).eq('id', post.id)
     setPosts(p => p.map(x => x.id === post.id ? { ...x, is_active: !post.is_active } : x))
+  }
+
+  // ── Series-aware Edit / Delete interceptors ──────────────────────
+  function requestEdit(post) {
+    if (post.series_id) { setSeriesModal({ mode: 'edit', post }); return }
+    startEdit(post)
+  }
+
+  function requestDelete(post) {
+    if (post.series_id) { setSeriesModal({ mode: 'delete', post }); return }
+    deletePost(post.id)
+  }
+
+  function confirmSeriesEdit(scope) {
+    const { post } = seriesModal
+    setSeriesModal(null)
+    setEditingScope(scope)   // 'single' or 'series'
+    startEdit(post)
+  }
+
+  async function confirmSeriesDelete(scope) {
+    const { post } = seriesModal
+    setSeriesModal(null)
+    if (scope === 'single') {
+      if (!confirm('Delete this event? This cannot be undone.')) return
+      await supabase.from('posts').delete().eq('id', post.id)
+    } else {
+      if (!confirm(`Delete ALL future events in "${post.title}"?\n\nThis cannot be undone.`)) return
+      const todayISO = new Date().toISOString()
+      await supabase.from('posts').delete()
+        .eq('series_id', post.series_id)
+        .gte('start_time', todayISO)
+    }
+    loadPosts()
   }
 
   return (
@@ -610,14 +642,29 @@ export default function AdminDashboard() {
         {/* ── Section 3: New / Edit Post ─────────────────────── */}
         <section style={sectionCard}>
           <SectionHeader
-            title={editing ? 'Edit Post' : 'New Resource Post'}
-            icon={editing ? '✏️' : '＋'}
+            title={editingScope === 'series' && editing ? 'Edit Series' : editing ? 'Edit Post' : 'New Resource Post'}
+            icon={editingScope === 'series' && editing ? '🔁' : editing ? '✏️' : '＋'}
             open={showForm}
             onToggle={() => setShowForm(v => !v)}
           />
 
           {showForm && (
             <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+              {/* Series-edit mode banner */}
+              {editingScope === 'series' && editing && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.625rem',
+                  padding: '0.75rem 1rem',
+                  background: 'hsla(28,95%,55%,0.07)',
+                  border: '1px solid hsla(28,95%,55%,0.3)',
+                  borderRadius: 10,
+                  fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-primary)',
+                }}>
+                  <span style={{ fontSize: '1rem' }}>🔁</span>
+                  <span>Editing <strong>all future events</strong> in this series — each event’s individual date &amp; time will not change.</span>
+                </div>
+              )}
 
               {/* Category */}
               <div>
@@ -1102,9 +1149,9 @@ export default function AdminDashboard() {
                           <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text-primary)' }}>{post.title}</span>
                           <span className={`status-badge status-${post.status}`}>{post.status}</span>
                           {!post.is_active && <span className="status-badge status-archived">inactive</span>}
-                          {post.is_recurring && (
+                          {post.series_id && (
                             <span style={{ fontSize: '0.72rem', color: 'var(--color-primary)', fontWeight: 700, background: 'hsla(28,95%,55%,0.1)', padding: '2px 8px', borderRadius: 20, border: '1px solid hsla(28,95%,55%,0.25)' }}>
-                              ↺ recurring
+                              🔁 series
                             </span>
                           )}
                         </div>
@@ -1113,8 +1160,8 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', flexShrink: 0 }}>
-                        <button className="btn-secondary" style={{ fontSize: '0.8rem', padding: '5px 12px' }} onClick={() => startEdit(post)}>Edit</button>
-                        <button className="btn-danger" onClick={() => deletePost(post.id)}>Delete</button>
+                        <button className="btn-secondary" style={{ fontSize: '0.8rem', padding: '5px 12px' }} onClick={() => requestEdit(post)}>Edit</button>
+                        <button className="btn-danger" onClick={() => requestDelete(post)}>Delete</button>
                       </div>
                     </div>
                   )
@@ -1124,6 +1171,43 @@ export default function AdminDashboard() {
           </div>
         </section>
       </div>
+
+      {/* ── Series choice modal ───────────────────────────────── */}
+      {seriesModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: 'var(--color-bg-medium)', border: '1px solid var(--color-border)', borderRadius: 18, padding: '2rem', maxWidth: 440, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.45)' }}>
+            <h3 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: 'var(--color-text-primary)', marginBottom: '0.4rem' }}>
+              {seriesModal.mode === 'edit' ? '✏️ Edit Recurring Event' : '🗑️ Delete Recurring Event'}
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+              <strong>“{seriesModal.post.title}”</strong> is part of a recurring series.{' '}
+              {seriesModal.mode === 'edit'
+                ? 'Edit just this occurrence, or update all future events?'
+                : 'Remove just this occurrence, or delete all future events?'}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              <button
+                onClick={() => seriesModal.mode === 'edit' ? confirmSeriesEdit('single') : confirmSeriesDelete('single')}
+                style={{ padding: '0.75rem 1rem', borderRadius: 10, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-primary)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', textAlign: 'left' }}
+              >
+                📅 {seriesModal.mode === 'edit' ? 'Edit This Event Only' : 'Delete This Event Only'}
+              </button>
+              <button
+                onClick={() => seriesModal.mode === 'edit' ? confirmSeriesEdit('series') : confirmSeriesDelete('series')}
+                style={{ padding: '0.75rem 1rem', borderRadius: 10, border: `1px solid ${seriesModal.mode === 'delete' ? 'var(--color-error)' : 'var(--color-primary)'}`, background: seriesModal.mode === 'delete' ? 'hsla(0,84%,60%,0.07)' : 'hsla(28,95%,55%,0.07)', color: seriesModal.mode === 'delete' ? 'var(--color-error)' : 'var(--color-primary)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', textAlign: 'left' }}
+              >
+                {seriesModal.mode === 'edit' ? '🔁 Update All Future Events in Series' : '⚠️ Delete All Future Events in Series'}
+              </button>
+              <button
+                onClick={() => setSeriesModal(null)}
+                style={{ padding: '0.5rem', borderRadius: 10, border: 'none', background: 'transparent', color: 'var(--color-text-muted)', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Recurring creation progress bar ─────────────────── */}
       {createProgress && (

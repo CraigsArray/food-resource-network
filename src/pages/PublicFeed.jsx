@@ -235,45 +235,11 @@ export default function PublicFeed() {
       return
     }
 
-    const recurringIds = (recurringPosts ?? []).map(p => p.id)
-
-    let nextOccurrenceByPostId = {}
-    if (recurringIds.length > 0) {
-      const { data: upcomingOccs, error: err3 } = await supabase
-        .from('post_occurrences')
-        .select('post_id, start_time, end_time')
-        .in('post_id', recurringIds)
-        .gte('start_time', todayISO)
-        .order('start_time', { ascending: true })
-
-      if (err3) console.error('loadPosts (occurrences):', err3)
-
-      // Keep only the earliest upcoming occurrence per post
-      for (const occ of (upcomingOccs ?? [])) {
-        if (!nextOccurrenceByPostId[occ.post_id]) {
-          nextOccurrenceByPostId[occ.post_id] = occ
-        }
-      }
-    }
-
-    // Resolve each recurring post to its display date. Two models exist:
-    //   • "Series" model: one post row whose own start_time may be in the past,
-    //     but future dates live in post_occurrences (e.g. Weekly Food Distribution).
-    //     → Use the next post_occurrences date.
-    //   • "Individual-occurrence" model: the admin form inserts one row per date,
-    //     each with is_recurring=true and its own start_time (no post_occurrences rows).
-    //     → Use the post's own start_time if it's today-or-future.
-    //   • Anything with no future occurrence in either place → drop.
+    // All recurring posts now use the individual-occurrence model:
+    // each post row has its own start_time. Just filter to today-or-future.
     const recurringWithNext = (recurringPosts ?? []).flatMap(p => {
-      if (nextOccurrenceByPostId[p.id]) {
-        // Series model — override with the next post_occurrences date
-        return [{ ...p, start_time: nextOccurrenceByPostId[p.id].start_time, end_time: nextOccurrenceByPostId[p.id].end_time }]
-      }
-      if (p.start_time && new Date(p.start_time) >= new Date(todayISO)) {
-        // Individual-occurrence model — use the post's own date if today-or-future
-        return [p]
-      }
-      return [] // past with no future occurrences — drop
+      if (p.start_time && new Date(p.start_time) >= new Date(todayISO)) return [p]
+      return [] // past — drop
     })
 
     // ── 3. Merge and sort: dated posts ascending, undated posts at the end ──
@@ -624,19 +590,31 @@ export default function PublicFeed() {
               gap: '0.75rem',
             }}>
               <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)', textAlign: 'center' }}>Reliable Food Providers</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0 }}>🥫</span>
+              {/* SD Food Bank */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
+                <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
+                  <img
+                    src="https://www.vikingcold.com/wp-content/uploads/2019/11/san-diego-food-bank.png"
+                    alt="San Diego Food Bank"
+                    style={{ height: 36, width: 'auto', display: 'block', objectFit: 'contain' }}
+                  />
+                </a>
                 <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
-                  <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>San Diego Food Bank</a>
-                  {' '}— county-wide food distributions and pantries.
+                  County-wide food distributions and pantries.
                 </p>
               </div>
               <div style={{ height: 1, background: 'var(--color-border)' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0 }}>🍽️</span>
+              {/* Feeding San Diego */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
+                <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
+                  <img
+                    src="https://feedingsandiego.org/wp-content/uploads/2021/03/Feeding-San-Diego-Logo-Color.png"
+                    alt="Feeding San Diego"
+                    style={{ height: 36, width: 'auto', display: 'block', objectFit: 'contain' }}
+                  />
+                </a>
                 <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
-                  <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>Feeding San Diego</a>
-                  {' '}— surplus food rescue and regional distribution sites.
+                  Surplus food rescue and regional distribution sites.
                 </p>
               </div>
             </div>
@@ -655,18 +633,30 @@ export default function PublicFeed() {
           }}>
             <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)', textAlign: 'center' }}>Reliable Food Providers</span>
             <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: '1 1 200px', justifyContent: 'center' }}>
-                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0 }}>🥫</span>
+              {/* SD Food Bank */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', flex: '1 1 200px' }}>
+                <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
+                  <img
+                    src="https://www.vikingcold.com/wp-content/uploads/2019/11/san-diego-food-bank.png"
+                    alt="San Diego Food Bank"
+                    style={{ height: 36, width: 'auto', display: 'block', objectFit: 'contain' }}
+                  />
+                </a>
                 <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
-                  <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>San Diego Food Bank</a>
-                  {' '}— county-wide food distributions and pantries.
+                  County-wide food distributions and pantries.
                 </p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: '1 1 200px', justifyContent: 'center' }}>
-                <span style={{ fontSize: '1.1rem', lineHeight: 1, flexShrink: 0 }}>🍽️</span>
+              {/* Feeding San Diego */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', flex: '1 1 200px' }}>
+                <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
+                  <img
+                    src="https://feedingsandiego.org/wp-content/uploads/2021/03/Feeding-San-Diego-Logo-Color.png"
+                    alt="Feeding San Diego"
+                    style={{ height: 36, width: 'auto', display: 'block', objectFit: 'contain' }}
+                  />
+                </a>
                 <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
-                  <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>Feeding San Diego</a>
-                  {' '}— surplus food rescue and regional distribution sites.
+                  Surplus food rescue and regional distribution sites.
                 </p>
               </div>
             </div>
