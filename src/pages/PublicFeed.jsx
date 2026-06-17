@@ -600,7 +600,7 @@ export default function PublicFeed() {
                       style={{ height: 28, width: 'auto', display: 'block', objectFit: 'contain' }}
                     />
                   </a>
-                  <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--color-text-primary)' }}>San Diego Food Bank</span>
+                  <span style={{ fontWeight: 700, fontSize: '0.82rem' }}><a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-text-primary)', textDecoration: 'none' }}>San Diego Food Bank</a></span>
                 </div>
                 <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
                   County-wide food distributions and pantries.
@@ -617,7 +617,7 @@ export default function PublicFeed() {
                       style={{ height: 28, width: 'auto', display: 'block', objectFit: 'contain' }}
                     />
                   </a>
-                  <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--color-text-primary)' }}>Feeding San Diego</span>
+                  <span style={{ fontWeight: 700, fontSize: '0.82rem' }}><a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-text-primary)', textDecoration: 'none' }}>Feeding San Diego</a></span>
                 </div>
                 <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
                   Surplus food rescue and regional distribution sites.
