@@ -87,10 +87,31 @@ function timeAgo(ts) {
   return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+// All times are entered and stored as PST. Strip +00 and parse without TZ suffix
+// so the browser treats them as local time, not UTC.
+function parseNaiveDate(ts) {
+  if (!ts) return null
+  return new Date(ts.slice(0, 16).replace(' ', 'T'))
+}
+function fmtTime(ts) {
+  if (!ts) return ''
+  const raw = ts.slice(11, 16)
+  const [h, m] = raw.split(':').map(Number)
+  if (isNaN(h) || isNaN(m)) return ''
+  const period = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 || 12
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`
+}
+function fmtDateShort(ts) {
+  if (!ts) return ''
+  const [y, mo, d] = ts.slice(0, 10).split('-').map(Number)
+  return new Date(y, mo - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
 function dateKey(post) {
   if (!post.start_time) return 'no-date'
-  const d = new Date(post.start_time)
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+  const [y, mo, d] = post.start_time.slice(0, 10).split('-').map(Number)
+  return `${y}-${mo - 1}-${d}` // month 0-indexed to match keyToDate
 }
 
 function keyToDate(key) {
@@ -384,8 +405,8 @@ export default function IframeFeed() {
                   localizer={localizer}
                   events={posts.filter(p => p.start_time).map(p => ({
                     id: p.id, title: p.title,
-                    start: new Date(p.start_time),
-                    end: p.end_time ? new Date(p.end_time) : new Date(p.start_time),
+                    start: parseNaiveDate(p.start_time),
+                    end: parseNaiveDate(p.end_time) ?? parseNaiveDate(p.start_time),
                     resource: p,
                   }))}
                   defaultView="month"
@@ -455,8 +476,8 @@ export default function IframeFeed() {
 
                             {post.start_time && (
                               <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-primary)', marginBottom: '0.3rem' }}>
-                                🕐 {new Date(post.start_time).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                                {post.end_time ? ` – ${new Date(post.end_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : ''}
+                                🕐 {fmtTime(post.start_time)}
+                                {post.end_time ? ` – ${fmtTime(post.end_time)}` : ''}
                               </p>
                             )}
 
@@ -467,7 +488,7 @@ export default function IframeFeed() {
                               </span>
                               {post.start_time && (
                                 <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-                                  {new Date(post.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                  {fmtDateShort(post.start_time)}
                                 </span>
                               )}
                             </div>

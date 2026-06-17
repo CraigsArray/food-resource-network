@@ -5,6 +5,12 @@ import 'react-big-calendar/lib/css/react-big-calendar.css'
 
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { 'en-US': enUS } })
 
+// All event times are PST — strip Supabase's +00 suffix before parsing
+function parseNaiveDate(ts) {
+  if (!ts) return null
+  return new Date(ts.slice(0, 16).replace(' ', 'T'))
+}
+
 function CalendarEvent({ event }) {
   const post = event.resource
   return (
@@ -55,8 +61,8 @@ export default function CalendarPanel({ posts, onSelectEvent }) {
         events={posts.filter(p => p.start_time).map(p => ({
           id:       p.id,
           title:    p.title,
-          start:    new Date(p.start_time),
-          end:      p.end_time ? new Date(p.end_time) : new Date(p.start_time),
+          start:    parseNaiveDate(p.start_time),
+          end:      parseNaiveDate(p.end_time) ?? parseNaiveDate(p.start_time),
           resource: p,
         }))}
         defaultView="month"

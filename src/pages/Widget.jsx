@@ -5,6 +5,13 @@ function mapsLink(address, city) {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent([address, city].filter(Boolean).join(', '))}`
 }
 
+// All event times are entered as PST. Strip the Supabase-appended +00 and parse
+// without a TZ suffix so the browser treats the value as local (PST) time.
+function parseNaiveDate(ts) {
+  if (!ts) return null
+  return new Date(ts.slice(0, 16).replace(' ', 'T'))
+}
+
 function timeLabel(dt) {
   if (!dt) return null
   const d = new Date(dt)
@@ -34,8 +41,8 @@ function categorise(posts) {
   const pastPosts     = []
 
   for (const p of posts) {
-    const start = p.start_time ? new Date(p.start_time) : null
-    const end   = p.end_time   ? new Date(p.end_time)   : null
+    const start = p.start_time ? parseNaiveDate(p.start_time) : null
+    const end   = p.end_time   ? parseNaiveDate(p.end_time)   : null
 
     if (end && end < now) { pastPosts.push(p); continue }
 
@@ -53,8 +60,8 @@ function categorise(posts) {
 
 function PostRow({ post }) {
   const [expanded, setExpanded] = useState(false)
-  const start = post.start_time ? new Date(post.start_time) : null
-  const end   = post.end_time   ? new Date(post.end_time)   : null
+  const start = post.start_time ? parseNaiveDate(post.start_time) : null
+  const end   = post.end_time   ? parseNaiveDate(post.end_time)   : null
 
   const timeStr = [start && timeLabel(start), end && timeLabel(end)].filter(Boolean).join(' – ')
   const dateStr = start ? dateLabel(start) : null

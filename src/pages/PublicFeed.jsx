@@ -83,10 +83,38 @@ function timeAgo(ts) {
   return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+// Treats stored timestamps as "naive" local times — the admin form saves bare
+// datetime strings (e.g. "2026-07-29T11:30") which Supabase stores as UTC (+00).
+// Using new Date() applies a timezone offset, making PDT events display 7 h early.
+// Parsing directly from the raw string bypasses that conversion.
+function fmtTime(ts) {
+  if (!ts) return ''
+  const raw = ts.slice(11, 16) // "HH:MM"
+  const [h, m] = raw.split(':').map(Number)
+  if (isNaN(h) || isNaN(m)) return ''
+  const period = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 || 12
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`
+}
+
+function fmtDateShort(ts) {
+  if (!ts) return ''
+  const [y, mo, d] = ts.slice(0, 10).split('-').map(Number)
+  return new Date(y, mo - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
+// Parses a stored timestamp as PST — admin saves bare datetimes which Supabase
+// appends +00 to. Slicing off the suffix and parsing without TZ forces local time.
+function parseNaiveDate(ts) {
+  if (!ts) return null
+  return new Date(ts.slice(0, 16).replace(' ', 'T'))
+}
+
 function dateKey(post) {
   if (!post.start_time) return 'no-date'
-  const d = new Date(post.start_time)
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+  // Parse date directly from string — avoids timezone shift (see fmtTime comment)
+  const [y, mo, d] = post.start_time.slice(0, 10).split('-').map(Number)
+  return `${y}-${mo - 1}-${d}` // month 0-indexed to match keyToDate
 }
 
 function keyToDate(key) {
@@ -318,7 +346,7 @@ export default function PublicFeed() {
         markersRef.current.forEach(m => m.infoWindow?.close())
         iw.open(mapRef.current, marker)
         if (post.start_time) {
-          const d = new Date(post.start_time)
+          const d = parseNaiveDate(post.start_time)
           const feedId = `feed-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
           const sortedPosts = [...posts].filter(p => p.start_time)
             .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
@@ -810,11 +838,11 @@ export default function PublicFeed() {
                           {post.start_time && (
                             <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexWrap: 'wrap' }}>
                               <span>
-                                🕐 {new Date(post.start_time).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                                {post.end_time ? ` – ${new Date(post.end_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : ''}
+                                🕐 {fmtTime(post.start_time)}
+                                {post.end_time ? ` – ${fmtTime(post.end_time)}` : ''}
                               </span>
                               <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-text-muted)' }}>
-                                {new Date(post.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                {fmtDateShort(post.start_time)}
                               </span>
                             </p>
                           )}

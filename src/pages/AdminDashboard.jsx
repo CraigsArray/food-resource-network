@@ -9,6 +9,13 @@ import 'react-big-calendar/lib/css/react-big-calendar.css'
 
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { 'en-US': enUS } })
 
+// All event times are entered and stored as PST. Supabase appends +00, so we
+// strip it and parse without a TZ suffix to keep the browser in local (PST) time.
+function parseNaiveDate(ts) {
+  if (!ts) return null
+  return new Date(ts.slice(0, 16).replace(' ', 'T'))
+}
+
 const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
 const CATEGORIES = [
@@ -1106,8 +1113,8 @@ export default function AdminDashboard() {
                 events={posts.filter(p => p.start_time).map(p => ({
                   id: p.id,
                   title: p.title,
-                  start: new Date(p.start_time),
-                  end: p.end_time ? new Date(p.end_time) : new Date(p.start_time),
+                  start: parseNaiveDate(p.start_time),
+                  end: parseNaiveDate(p.end_time) ?? parseNaiveDate(p.start_time),
                   resource: p,
                 }))}
                 defaultView="month"
@@ -1156,7 +1163,7 @@ export default function AdminDashboard() {
                           )}
                         </div>
                         <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                          {cat?.label ?? post.category} · {post.address || 'No address'} · {post.start_time ? new Date(post.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set'}
+                          {cat?.label ?? post.category} · {post.address || 'No address'} · {post.start_time ? (() => { const [y, mo, d] = post.start_time.slice(0, 10).split('-').map(Number); return new Date(y, mo - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) })() : 'No date set'}
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', flexShrink: 0 }}>
