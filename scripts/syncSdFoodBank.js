@@ -210,12 +210,12 @@ async function locationToPost(loc, orgId) {
   if (foodType)       descLines.push(`🥕 Food provided: ${foodType}`)
   if (eligibility)    descLines.push(`✅ Eligibility: ${eligibility}`)
   if (instructions)   descLines.push(`ℹ️ Service instructions: ${instructions}`)
-  if (loc.phone)      descLines.push(`📞 ${loc.phone}`)
 
   return {
     source_id:       `${SOURCE_PREFIX}${loc.id}`,
     organization_id: orgId,
     title:           loc.name,
+    location_name:   loc.name,
     description:     descLines.join('\n\n'),
     address:         addr.address,
     city:            addr.city,
@@ -226,9 +226,14 @@ async function locationToPost(loc, orgId) {
     end_time:        endTime,
     category:        'food-distribution',
     tags,
+    // Phone in its own column so the feed renders it as a tap-to-call link
+    organizer_phone: loc.phone?.trim() || null,
+    // SD Food Bank logo — same image used in the partner org box on the public feed
+    image_url:       'https://www.vikingcold.com/wp-content/uploads/2019/11/san-diego-food-bank.png',
     is_active:       true,
     is_recurring:    false,
-    status:          'draft',
+    // Published immediately so posts appear on the live feed after sync
+    status:          'published',
   }
 }
 
@@ -290,7 +295,7 @@ async function upsertPost(post) {
     console.error(`    ✗ Insert failed [${post.source_id}]:`, error.message)
     return 'skipped'
   }
-  console.log(`    ✨ New draft: ${post.title}`)
+  console.log(`    ✨ New post: ${post.title}`)
   return 'new'
 }
 
