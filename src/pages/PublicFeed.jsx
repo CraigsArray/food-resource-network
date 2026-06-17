@@ -592,13 +592,16 @@ export default function PublicFeed() {
               <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)', textAlign: 'center' }}>Reliable Food Providers</span>
               {/* SD Food Bank */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
-                <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
-                  <img
-                    src="https://www.vikingcold.com/wp-content/uploads/2019/11/san-diego-food-bank.png"
-                    alt="San Diego Food Bank"
-                    style={{ height: 36, width: 'auto', display: 'block', objectFit: 'contain' }}
-                  />
-                </a>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
+                    <img
+                      src="https://www.vikingcold.com/wp-content/uploads/2019/11/san-diego-food-bank.png"
+                      alt="San Diego Food Bank"
+                      style={{ height: 28, width: 'auto', display: 'block', objectFit: 'contain' }}
+                    />
+                  </a>
+                  <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--color-text-primary)' }}>San Diego Food Bank</span>
+                </div>
                 <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
                   County-wide food distributions and pantries.
                 </p>
@@ -606,13 +609,16 @@ export default function PublicFeed() {
               <div style={{ height: 1, background: 'var(--color-border)' }} />
               {/* Feeding San Diego */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
-                <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
-                  <img
-                    src="https://feedingsandiego.org/wp-content/uploads/2021/03/Feeding-San-Diego-Logo-Color.png"
-                    alt="Feeding San Diego"
-                    style={{ height: 36, width: 'auto', display: 'block', objectFit: 'contain' }}
-                  />
-                </a>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
+                    <img
+                      src="https://feedingsandiego.org/wp-content/uploads/2021/03/Feeding-San-Diego-Logo-Color.png"
+                      alt="Feeding San Diego"
+                      style={{ height: 28, width: 'auto', display: 'block', objectFit: 'contain' }}
+                    />
+                  </a>
+                  <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--color-text-primary)' }}>Feeding San Diego</span>
+                </div>
                 <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
                   Surplus food rescue and regional distribution sites.
                 </p>
@@ -635,26 +641,32 @@ export default function PublicFeed() {
             <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
               {/* SD Food Bank */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', flex: '1 1 200px' }}>
-                <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
-                  <img
-                    src="https://www.vikingcold.com/wp-content/uploads/2019/11/san-diego-food-bank.png"
-                    alt="San Diego Food Bank"
-                    style={{ height: 36, width: 'auto', display: 'block', objectFit: 'contain' }}
-                  />
-                </a>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
+                    <img
+                      src="https://www.vikingcold.com/wp-content/uploads/2019/11/san-diego-food-bank.png"
+                      alt="San Diego Food Bank"
+                      style={{ height: 28, width: 'auto', display: 'block', objectFit: 'contain' }}
+                    />
+                  </a>
+                  <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--color-text-primary)' }}>San Diego Food Bank</span>
+                </div>
                 <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
                   County-wide food distributions and pantries.
                 </p>
               </div>
               {/* Feeding San Diego */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', flex: '1 1 200px' }}>
-                <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
-                  <img
-                    src="https://feedingsandiego.org/wp-content/uploads/2021/03/Feeding-San-Diego-Logo-Color.png"
-                    alt="Feeding San Diego"
-                    style={{ height: 36, width: 'auto', display: 'block', objectFit: 'contain' }}
-                  />
-                </a>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
+                    <img
+                      src="https://feedingsandiego.org/wp-content/uploads/2021/03/Feeding-San-Diego-Logo-Color.png"
+                      alt="Feeding San Diego"
+                      style={{ height: 28, width: 'auto', display: 'block', objectFit: 'contain' }}
+                    />
+                  </a>
+                  <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--color-text-primary)' }}>Feeding San Diego</span>
+                </div>
                 <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
                   Surplus food rescue and regional distribution sites.
                 </p>
