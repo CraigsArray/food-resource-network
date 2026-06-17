@@ -512,7 +512,25 @@ export default function IframeFeed() {
                                     </a>
                                   </p>
                                 )}
-                                <PostAttachment url={post.image_url} title={post.title} />
+                                {(() => {
+                                  const isFsd  = post.source_id?.startsWith('fsd_')
+                                  const isSdfb = post.source_id?.startsWith('sdfb_')
+                                  if ((isFsd || isSdfb) && post.image_url) {
+                                    const href  = isFsd ? 'https://feedingsandiego.org' : 'https://www.sandiegofoodbank.org'
+                                    const label = isFsd ? 'feedingsandiego.org' : 'sandiegofoodbank.org'
+                                    const name  = isFsd ? 'Feeding San Diego' : 'San Diego Food Bank'
+                                    return (
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.625rem', padding: '0.5rem 0.75rem', background: 'var(--color-surface)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
+                                        <img src={post.image_url} alt={name} style={{ height: 'auto', width: 'auto', maxHeight: 40, maxWidth: 40, objectFit: 'contain', flexShrink: 0 }} />
+                                        <div>
+                                          <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginBottom: 2 }}>Provided by</div>
+                                          <a href={href} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }} onClick={e => e.stopPropagation()}>{label} →</a>
+                                        </div>
+                                      </div>
+                                    )
+                                  }
+                                  return <PostAttachment url={post.image_url} title={post.title} />
+                                })()}
                                 {post.tags?.length > 0 && (
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.375rem' }}>
                                     {post.tags.map(t => (
