@@ -186,6 +186,7 @@ export default function PublicFeed() {
   })
   const [toast, setToast]           = useState('')
   const [activeTab, setActiveTab]   = useState('map')
+  const [feedCityFilter, setFeedCityFilter] = useState('')
   const [visibleCount, setVisibleCount] = useState(50)
   const [pinnedPost, setPinnedPost]     = useState(null)
   const mapRef           = useRef(null)
@@ -766,13 +767,36 @@ export default function PublicFeed() {
         </div>
 
         {/* Feed */}
-        <h2 style={{
-          fontFamily: 'Outfit, sans-serif', fontSize: '1.35rem', fontWeight: 700,
-          marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
-          color: 'var(--color-text-primary)',
-        }}>
-          Upcoming Events, Sorted by Date
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <h2 style={{
+            fontFamily: 'Outfit, sans-serif', fontSize: '1.35rem', fontWeight: 700,
+            margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem',
+            color: 'var(--color-text-primary)',
+          }}>
+            Upcoming Events, Sorted by Date
+          </h2>
+          {posts.length > 0 && (
+            <select
+              value={feedCityFilter}
+              onChange={e => { setFeedCityFilter(e.target.value); setVisibleCount(50); }}
+              style={{
+                padding: '0.4rem 0.8rem',
+                borderRadius: 8,
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-surface)',
+                color: 'var(--color-text-primary)',
+                fontSize: '0.9rem',
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="">All Cities</option>
+              {[...new Set(posts.map(p => p.city?.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)).map(city => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </select>
+          )}
+        </div>
 
         {loading ? (
           <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '3rem' }}>Loading resources…</p>
@@ -781,8 +805,16 @@ export default function PublicFeed() {
         ) : posts.length === 0 ? (
           <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '3rem' }}>📭 No active posts yet.</p>
         ) : (() => {
-          const sortedPosts = [...posts].filter(p => p.start_time).sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
-          const noDates = posts.filter(p => !p.start_time)
+          const filteredPosts = feedCityFilter 
+            ? posts.filter(p => p.city?.trim().toLowerCase() === feedCityFilter.toLowerCase()) 
+            : posts
+          
+          if (filteredPosts.length === 0) {
+            return <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '3rem' }}>No events found for {feedCityFilter}.</p>
+          }
+
+          const sortedPosts = [...filteredPosts].filter(p => p.start_time).sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+          const noDates = filteredPosts.filter(p => !p.start_time)
           const allOrdered = [...sortedPosts, ...noDates]
           const visiblePosts = allOrdered.slice(0, visibleCount)
           const remaining = allOrdered.length - visiblePosts.length
