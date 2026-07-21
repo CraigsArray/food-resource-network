@@ -810,7 +810,7 @@ async function deactivateVanished(processedLocationIds, processedPostIds, window
     else console.log(`  🗑️  Deactivated (${locationVanished ? 'vanished' : 'stale'}): ${post.title} [${post.source_id}]`)
   }
 
-  return vanished.length
+  return stale.length
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
