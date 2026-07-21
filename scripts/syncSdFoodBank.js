@@ -348,22 +348,42 @@ function needsAiForReschedule(rescheduleText) {
 }
 
 /**
- * Converts a naive "YYYY-MM-DDTHH:MM:00" string (no offset) — as returned by
- * the AI, meaning America/Los_Angeles local time — into a correct UTC ISO
- * string for storage.
+ * Formats a locally-constructed Date (its getters reflect America/Los_Angeles
+ * wall-clock time, since TZ is set at the top of this file) as a "naive"
+ * datetime string with NO timezone suffix — e.g. "2026-07-21T09:00:00".
  *
- * Relying on `new Date(str)` alone would be a footgun here: per spec, a
- * date-time string with no offset is parsed in the *local* timezone of the
- * running process, which is only correct because we set TZ=America/Los_Angeles
- * at the top of this file. This function makes that dependency explicit and
- * produces an unambiguous 'Z'-suffixed string so Postgres can't misinterpret
- * it under its own session timezone.
+ * This matches an existing, deliberate convention elsewhere in this app (see
+ * the admin post-creation form and PublicFeed.jsx's fmtTime/dateKey/
+ * parseNaiveDate): timestamps are stored as bare local-time digits, and
+ * Postgres labels them UTC on the way in without actually converting them.
+ * The frontend reads those raw digits straight back out without
+ * re-converting. A genuinely-correct UTC conversion here (what this function
+ * replaced) gets relabeled as local time on display and silently shifts
+ * every post by the Pacific UTC offset — 7-8 hours forward, which for
+ * evening events rolls the calendar date forward by a full day too.
  */
-function localIsoToUtcIso(naiveLocalIso) {
+function toNaiveLocalString(date) {
+  const y = date.getFullYear()
+  const mo = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  const h = String(date.getHours()).padStart(2, '0')
+  const mi = String(date.getMinutes()).padStart(2, '0')
+  const s = String(date.getSeconds()).padStart(2, '0')
+  return `${y}-${mo}-${d}T${h}:${mi}:${s}`
+}
+
+/**
+ * Validates the AI's returned "YYYY-MM-DDTHH:MM:00" string and passes it
+ * through UNCHANGED — it's already in exactly the naive-local format
+ * described above, so no conversion belongs here. (This function used to
+ * convert to genuine UTC via `.toISOString()`, which was the bug — see
+ * toNaiveLocalString's comment.)
+ */
+function normalizeNaiveLocal(naiveLocalIso) {
   if (!naiveLocalIso) return null
   const d = new Date(naiveLocalIso)
   if (isNaN(d)) return null
-  return d.toISOString()
+  return naiveLocalIso
 }
 
 /**
@@ -511,8 +531,8 @@ async function buildAiParsedPost(loc, text, dayHints, rescheduleText, sharedDesc
   }
 
   return inWindow.map(occ => {
-    const startIso = localIsoToUtcIso(occ.start)
-    const endIso = localIsoToUtcIso(occ.end)
+    const startIso = normalizeNaiveLocal(occ.start)
+    const endIso = normalizeNaiveLocal(occ.end)
     const key = dateKey(new Date(occ.start))
     return {
       ...base,
@@ -646,8 +666,8 @@ async function locationToPosts(loc, orgId, windowStart, windowEnd) {
               // across overlapping sync-run windows (see buildAiParsedPost's comment).
               source_id: `${SOURCE_PREFIX}${loc.id}_${clause.weekdayName}_${ordinalLabel}_${dateKey(startDt)}`,
               description: descLines.join('\n\n'),
-              start_time: startDt.toISOString(),
-              end_time: endDt ? endDt.toISOString() : null,
+              start_time: toNaiveLocalString(startDt),
+              end_time: endDt ? toNaiveLocalString(endDt) : null,
             })
           }
         }
