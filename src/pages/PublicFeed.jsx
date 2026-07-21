@@ -326,6 +326,23 @@ export default function PublicFeed() {
     const visiblePosts = [...sortedAll, ...noDates].slice(0, visibleCount)
     markersRef.current.forEach(m => m.setMap(null))
     markersRef.current = []
+
+    // Expose global so InfoWindow date links can scroll the feed
+    window.__ecfn_gotoPost = (postId) => {
+      const p = posts.find(x => x.id === postId)
+      if (!p || !p.start_time) return
+      const d = parseNaiveDate(p.start_time)
+      const fid = `feed-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+      const sorted = [...posts].filter(x => x.start_time).sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+      const idx = sorted.findIndex(x => x.id === postId)
+      if (idx !== -1 && idx >= visibleCount) {
+        setVisibleCount(idx + 1)
+        pendingScrollRef.current = fid
+      } else {
+        document.getElementById(fid)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }
+
     visiblePosts.forEach(post => {
       if (!post.latitude || !post.longitude) return
       const color = orgColor(post.organizations?.name)
@@ -340,8 +357,11 @@ export default function PublicFeed() {
           strokeColor: '#fff', strokeWeight: 2,
         },
       })
+      const dateTimeStr = post.start_time
+        ? `${fmtDateShort(post.start_time)} · ${fmtTime(post.start_time)}`
+        : ''
       const iw = new window.google.maps.InfoWindow({
-        content: `<div style="font-family:Inter,sans-serif;max-width:230px"><b style="color:${color}">${post.title}</b><p style="margin:4px 0;font-size:12px;color:#555">${post.organizations?.name ?? ''}</p>${post.address ? `<p style="font-size:12px;margin:0">📍 ${post.address}</p>` : ''}</div>`,
+        content: `<div style="font-family:Inter,sans-serif;max-width:220px;padding:2px 0"><b style="color:${color};font-size:13px;line-height:1.3;display:block">${post.title}</b><p style="margin:3px 0 0;font-size:11px;color:#888">${post.organizations?.name ?? ''}</p>${post.address ? `<p style="font-size:11px;margin:3px 0 0;color:#666">📍 ${post.address}</p>` : ''}${dateTimeStr ? `<a href="#" onclick="event.preventDefault();window.__ecfn_gotoPost('${post.id}')" style="display:block;margin-top:7px;font-size:11px;font-weight:700;color:${color};text-decoration:none;cursor:pointer">🕐 ${dateTimeStr} ↓</a>` : ''}</div>`,
       })
       marker.addListener('click', () => {
         markersRef.current.forEach(m => m.infoWindow?.close())
@@ -444,6 +464,9 @@ export default function PublicFeed() {
           .pub-subtitle, .pub-maintained { display: none !important; }
           .pub-title { font-size: 0.95rem !important; line-height: 1.15 !important; }
         }
+        /* Compact Google Maps InfoWindow — removes excess padding */
+        .gm-style .gm-style-iw-c { padding: 8px 12px 10px !important; }
+        .gm-style .gm-style-iw-d { overflow: hidden !important; }
       `}</style>
 
       {/* Header — sticky on desktop, static on mobile */}
@@ -576,8 +599,8 @@ export default function PublicFeed() {
                 {new Date(pinnedPost.posted_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <span style={{ fontSize: '1rem' }}>📌</span>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--color-primary)' }}>Pinned</span>
+                <span style={{ fontSize: '1rem' }}>📣</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--color-primary)' }}>Announcements</span>
               </div>
               <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.3, paddingRight: '5rem' }}>
                 {pinnedPost.link_url ? (
@@ -925,7 +948,7 @@ export default function PublicFeed() {
                                       const name  = isFsd ? 'Feeding San Diego' : 'San Diego Food Bank'
                                       return (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem', padding: '0.5rem 0.75rem', background: 'var(--color-surface)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
-                                          <img src={postDetails[post.id].image_url} alt={name} style={{ height: 'auto', width: 'auto', maxHeight: 40, maxWidth: 40, objectFit: 'contain', flexShrink: 0 }} />
+                                          <img src={postDetails[post.id].image_url} alt={name} style={{ height: 'auto', width: 'auto', maxHeight: 22, maxWidth: 22, objectFit: 'contain', flexShrink: 0 }} />
                                           <div>
                                             <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginBottom: 2 }}>Provided by</div>
                                             <a href={href} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }} onClick={e => e.stopPropagation()}>{label} →</a>
