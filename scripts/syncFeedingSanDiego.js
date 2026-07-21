@@ -115,21 +115,63 @@ function nextOccurrence(dayOfWeek, hour, minute) {
 }
 
 /**
+ * Checks if startDt falls within any closure range found in closureNotes
+ * (e.g. "Closed 7/1/26 to 8/17/26"). If blocked, returns the next valid
+ * occurrence of the same weekday after the closure ends.
+ */
+function skipClosedDate(startDt, closureNotes, dayOfWeek, hour, minute) {
+  if (!closureNotes || !startDt) return startDt
+
+  // Match "Closed 7/1/26 to 8/17/26", "7/1 through 8/17", etc.
+  const ranges = [
+    ...closureNotes.matchAll(/(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(?:to|through|[-–])\s+(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/gi),
+  ]
+
+  for (const m of ranges) {
+    const parseDate = str => {
+      const parts = str.split('/').map(Number)
+      const [mo, d, y = new Date().getFullYear()] = parts
+      return new Date(y < 100 ? 2000 + y : y, mo - 1, d)
+    }
+    const closeStart = parseDate(m[1])
+    const closeEnd   = parseDate(m[2])
+
+    if (startDt >= closeStart && startDt <= closeEnd) {
+      // Find next occurrence of this weekday strictly after the closure ends
+      const base = new Date(closeEnd)
+      base.setDate(base.getDate() + 1)   // first day after closure
+      base.setHours(hour, minute, 0, 0)
+      const diff = (dayOfWeek - base.getDay() + 7) % 7
+      base.setDate(base.getDate() + diff)
+      console.log(`    ⏭️  Skipping closure — next valid date: ${base.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`)
+      return base
+    }
+  }
+
+  return startDt
+}
+
+/**
  * Calls OpenAI GPT-4o-mini (via built-in fetch, no package needed) to parse a
  * natural-language schedule into a concrete next occurrence.
  */
-async function parseScheduleWithAI(scheduleText, locationName) {
+async function parseScheduleWithAI(scheduleText, locationName, closureNotes = '') {
   if (!process.env.OPENAI_API_KEY) return { parsed: false }
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   })
 
+  const closureLine = closureNotes
+    ? `Closures/cancellations: "${closureNotes}"`
+    : ''
+
   const prompt = `You are a precise scheduling assistant for food distribution events.
 
 Today: ${today}
 Location: "${locationName}"
 Schedule: "${scheduleText}"
+${closureLine}
 
 Return the single NEXT upcoming occurrence as JSON. Rules:
 - Return ONLY valid JSON, no markdown or explanation
@@ -137,9 +179,10 @@ Return the single NEXT upcoming occurrence as JSON. Rules:
 - "Next" = closest future occurrence strictly after now (or today if not yet passed)
 - If schedule lists multiple patterns (e.g. "2nd and 4th Wednesday"), return only the single nearest one
 - Convert "a.m."/"p.m." to 24-hour correctly
+- IMPORTANT: If the next occurrence falls within any closure or cancellation period listed above, skip forward to the first valid occurrence after the closure ends
 
-Success: {"parsed":true,"start":"2026-06-11T09:00:00","end":"2026-06-11T11:00:00"}
-If end time unknown: {"parsed":true,"start":"2026-06-11T09:00:00","end":null}
+Success: {"parsed":true,"start":"2026-08-20T07:30:00","end":"2026-08-20T08:00:00"}
+If end time unknown: {"parsed":true,"start":"2026-08-20T07:30:00","end":null}
 If unparseable: {"parsed":false}`
 
   try {
@@ -181,9 +224,11 @@ async function locationToPosts(loc) {
   const scheduleText = (cf[CF_SCHEDULE] ?? '').trim()
   const closureNotes = (cf[CF_CLOSURES]  ?? '').trim()
 
-  // Tags: split Storepoint tags and always append "Feeding San Diego"
+  // Tags: split Storepoint tags, strip day-of-week names, always append "Feeding San Diego"
+  const FSD_DAY_SET = new Set(['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'])
+  const rawTagsFsd  = loc.tags ? loc.tags.split(',').map(t => t.trim()).filter(Boolean) : []
   const tags = [
-    ...(loc.tags ? loc.tags.split(',').map(t => t.trim()).filter(Boolean) : []),
+    ...rawTagsFsd.filter(t => !FSD_DAY_SET.has(t)),
     'Feeding San Diego',
   ]
 
@@ -232,8 +277,9 @@ async function locationToPosts(loc) {
         continue
       }
 
-      const startDt = nextOccurrence(DAY_INDEX[day], tr.startHour, tr.startMinute)
-      const endDt   = new Date(startDt)
+      const rawStart = nextOccurrence(DAY_INDEX[day], tr.startHour, tr.startMinute)
+      const startDt  = skipClosedDate(rawStart, closureNotes, DAY_INDEX[day], tr.startHour, tr.startMinute)
+      const endDt    = new Date(startDt)
       endDt.setHours(tr.endHour, tr.endMinute, 0, 0)
 
       const dayLabel = day.charAt(0).toUpperCase() + day.slice(1)
@@ -258,7 +304,7 @@ async function locationToPosts(loc) {
   // ── Type B: natural-language schedule → AI parsing ─────────────────────────
   if (scheduleText && scheduleText.toLowerCase() !== 'weekly') {
     console.log(`    🤖 AI parsing schedule: "${scheduleText}"`)
-    const ai = await parseScheduleWithAI(scheduleText, loc.name)
+    const ai = await parseScheduleWithAI(scheduleText, loc.name, closureNotes)
 
     const descLines = []
 

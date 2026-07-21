@@ -100,7 +100,7 @@ function normaliseTags(tagStr) {
  * The tags array is passed as a hint because SDFB includes the day of the week
  * as a tag (e.g. "Thursday"), which helps the model resolve ambiguous schedules.
  */
-async function parseScheduleWithAI(scheduleText, locationName, dayHints) {
+async function parseScheduleWithAI(scheduleText, locationName, dayHints, rescheduleText = '') {
   if (!process.env.OPENAI_API_KEY) return { parsed: false }
 
   const today = new Date().toLocaleDateString('en-US', {
@@ -111,12 +111,17 @@ async function parseScheduleWithAI(scheduleText, locationName, dayHints) {
     ? `Day-of-week hints from tags: ${dayHints.join(', ')}`
     : ''
 
+  const closureLine = rescheduleText
+    ? `Reschedules/cancellations: "${rescheduleText}"`
+    : ''
+
   const prompt = `You are a precise scheduling assistant for food distribution events.
 
 Today: ${today}
 Location: "${locationName}"
 ${hintLine}
 Schedule: "${scheduleText}"
+${closureLine}
 
 Return the single NEXT upcoming occurrence as JSON. Rules:
 - Return ONLY valid JSON, no markdown or explanation
@@ -126,9 +131,10 @@ Return the single NEXT upcoming occurrence as JSON. Rules:
 - Convert "10:00am", "9:30 am", "2:00 p.m." etc. correctly to 24-hour ISO format
 - If the end time is not stated, return null for "end"
 - Use day-of-week hints to resolve any ambiguity about which day is intended
+- IMPORTANT: If the next occurrence falls within any closure, cancellation, or reschedule period listed above, skip forward to the first valid occurrence after that period ends
 
-Success: {"parsed":true,"start":"2026-06-19T10:00:00","end":"2026-06-19T12:00:00"}
-If end time unknown: {"parsed":true,"start":"2026-06-19T10:00:00","end":null}
+Success: {"parsed":true,"start":"2026-08-20T10:00:00","end":"2026-08-20T12:00:00"}
+If end time unknown: {"parsed":true,"start":"2026-08-20T10:00:00","end":null}
 If unparseable: {"parsed":false}`
 
   try {
@@ -177,8 +183,12 @@ async function locationToPost(loc, orgId) {
   const dayNames = new Set(['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'])
   const dayHints = rawTags.filter(t => dayNames.has(t))
 
-  // Always append "San Diego Food Bank" tag
-  const tags = [...new Set([...rawTags, 'San Diego Food Bank'])]
+  // Strip day-of-week tags and internal program codes (e.g. EFAP) — meaningless to public visitors
+  const STRIP_TAGS = new Set([...dayNames, 'Efap', 'EFAP', 'efap'])
+  const cleanTags  = rawTags.filter(t => !STRIP_TAGS.has(t))
+
+  // Always append "San Diego Food Bank" as the primary org tag
+  const tags = [...new Set([...cleanTags, 'San Diego Food Bank'])]
 
   // ── AI schedule parsing ──────────────────────────────────────────────────
   let startTime = null
@@ -187,7 +197,7 @@ async function locationToPost(loc, orgId) {
 
   if (scheduleText) {
     console.log(`    🤖 Parsing: "${scheduleText}"`)
-    const ai = await parseScheduleWithAI(scheduleText, loc.name, dayHints)
+    const ai = await parseScheduleWithAI(scheduleText, loc.name, dayHints, rescheduleText)
     if (ai.parsed) {
       startTime = ai.start ?? null
       endTime   = ai.end   ?? null
@@ -205,11 +215,11 @@ async function locationToPost(loc, orgId) {
     )
   }
 
-  if (scheduleText)   descLines.push(`📅 Schedule: ${scheduleText}`)
-  if (rescheduleText) descLines.push(`⚠️ Reschedules / Cancellations: ${rescheduleText}`)
-  if (foodType)       descLines.push(`🥕 Food provided: ${foodType}`)
-  if (eligibility)    descLines.push(`✅ Eligibility: ${eligibility}`)
-  if (instructions)   descLines.push(`ℹ️ Service instructions: ${instructions}`)
+  if (scheduleText)   descLines.push(`📅 Schedule\n${scheduleText}`)
+  if (rescheduleText) descLines.push(`⚠️ Closures & Reschedules\n${rescheduleText}`)
+  if (foodType)       descLines.push(`🥕 Food Provided\n${foodType}`)
+  if (eligibility)    descLines.push(`✅ Eligibility\n${eligibility}`)
+  if (instructions)   descLines.push(`ℹ️ Service Instructions\n${instructions}`)
 
   return {
     source_id:       `${SOURCE_PREFIX}${loc.id}`,

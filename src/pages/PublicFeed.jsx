@@ -36,7 +36,12 @@ function PostAttachment({ url, title }) {
   const type = attachmentType(url)
   if (!type) return null
   if (type === 'image') {
-    return <img src={url} alt={title} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 10, marginBottom: '0.75rem' }} loading="lazy" />
+    const PARTNER_LOGOS = [
+      'https://www.vikingcold.com/wp-content/uploads/2019/11/san-diego-food-bank.png',
+      'https://feedingsandiego.org/wp-content/uploads/2021/03/Feeding-San-Diego-Logo-Color.png',
+    ]
+    const imgWidth = PARTNER_LOGOS.includes(url) ? '50%' : '100%'
+    return <img src={url} alt={title} style={{ width: imgWidth, height: 'auto', display: 'block', borderRadius: 10, marginBottom: '0.75rem' }} loading="lazy" />
   }
   const filename = decodeURIComponent(url.split('/').pop().split('?')[0]) || 'Attachment'
   const isPdf = type === 'pdf'
@@ -361,7 +366,7 @@ export default function PublicFeed() {
         ? `${fmtDateShort(post.start_time)} · ${fmtTime(post.start_time)}`
         : ''
       const iw = new window.google.maps.InfoWindow({
-        content: `<div style="font-family:Inter,sans-serif;max-width:220px;padding:2px 0"><b style="color:${color};font-size:13px;line-height:1.3;display:block">${post.title}</b><p style="margin:3px 0 0;font-size:11px;color:#888">${post.organizations?.name ?? ''}</p>${post.address ? `<p style="font-size:11px;margin:3px 0 0;color:#666">📍 ${post.address}</p>` : ''}${dateTimeStr ? `<a href="#" onclick="event.preventDefault();window.__ecfn_gotoPost('${post.id}')" style="display:block;margin-top:7px;font-size:11px;font-weight:700;color:${color};text-decoration:none;cursor:pointer">🕐 ${dateTimeStr} ↓</a>` : ''}</div>`,
+        content: `<div style="font-family:Inter,sans-serif;max-width:220px;padding:4px 26px 2px 0"><b style="color:${color};font-size:13px;line-height:1.3;display:block">${post.title}</b><p style="margin:3px 0 0;font-size:11px;color:#888">${post.organizations?.name ?? ''}</p>${post.address ? `<p style="font-size:11px;margin:3px 0 0;color:#666">📍 ${post.address}</p>` : ''}${dateTimeStr ? `<a href="#" onclick="event.preventDefault();window.__ecfn_gotoPost('${post.id}')" style="display:block;margin-top:7px;font-size:11px;font-weight:700;color:${color};text-decoration:none;cursor:pointer">🕐 ${dateTimeStr} ↓</a>` : ''}</div>`,
       })
       marker.addListener('click', () => {
         markersRef.current.forEach(m => m.infoWindow?.close())
@@ -464,9 +469,12 @@ export default function PublicFeed() {
           .pub-subtitle, .pub-maintained { display: none !important; }
           .pub-title { font-size: 0.95rem !important; line-height: 1.15 !important; }
         }
-        /* Compact Google Maps InfoWindow — removes excess padding */
-        .gm-style .gm-style-iw-c { padding: 8px 12px 10px !important; }
+        /* Compact Google Maps InfoWindow — removes excess padding and blank X-button row */
+        .gm-style .gm-style-iw-c { padding: 10px 12px 10px !important; }
         .gm-style .gm-style-iw-d { overflow: hidden !important; }
+        /* Float the close button over the top-right corner — eliminates the empty header row */
+        .gm-style .gm-style-iw-chr { position: absolute !important; top: 2px !important; right: 2px !important; height: 0 !important; overflow: visible !important; }
+        .gm-style .gm-ui-hover-effect { opacity: 0.65; }
       `}</style>
 
       {/* Header — sticky on desktop, static on mobile */}
@@ -902,7 +910,7 @@ export default function PublicFeed() {
                             </p>
                           )}
 
-                          {/* Provider + category */}
+                          {/* Provider + category + resource tags */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: post.address ? '0.3rem' : 0 }}>
                             <span style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--color-text-secondary)' }}>
                               {orgName || 'Anonymous'}
@@ -910,6 +918,18 @@ export default function PublicFeed() {
                             <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: '0.68rem', fontWeight: 700, background: `${color}22`, color, border: `1px solid ${color}44` }}>
                               {post.category ?? 'food'}
                             </span>
+                            {(() => {
+                              const SKIP = new Set(['Feeding San Diego', 'San Diego Food Bank', 'food-distribution', post.category ?? ''])
+                              const DAY_SET = new Set(['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'])
+                              return (post.tags ?? [])
+                                .filter(t => t && !SKIP.has(t) && !DAY_SET.has(t))
+                                .slice(0, 2)
+                                .map(t => (
+                                  <span key={t} style={{ padding: '2px 8px', borderRadius: 6, fontSize: '0.68rem', fontWeight: 600, background: 'hsla(142,60%,45%,0.12)', color: 'var(--color-success)', border: '1px solid hsla(142,60%,45%,0.3)' }}>
+                                    {t}
+                                  </span>
+                                ))
+                            })()}
                           </div>
 
                           {/* Address */}
@@ -927,9 +947,11 @@ export default function PublicFeed() {
                               ) : (
                                 <>
                                   {postDetails[post.id].description && (
-                                    <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.7, marginBottom: '0.75rem', fontSize: '0.9rem' }}>
-                                      {postDetails[post.id].description}
-                                    </p>
+                                    <div style={{ marginBottom: '0.75rem' }}>
+                                      {postDetails[post.id].description.split('\n\n').map((block, bi) => (
+                                        <p key={bi} style={{ color: 'var(--color-text-secondary)', lineHeight: 1.65, fontSize: '0.88rem', margin: bi === 0 ? '0 0 0.5rem' : '0.6rem 0 0', whiteSpace: 'pre-line' }}>{block}</p>
+                                      ))}
+                                    </div>
                                   )}
                                   {postDetails[post.id].organizer_phone && (
                                     <p style={{ fontSize: '0.88rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -958,10 +980,10 @@ export default function PublicFeed() {
                                     }
                                     return <PostAttachment url={postDetails[post.id].image_url} title={post.title} />
                                   })()}
-                                  {postDetails[post.id].tags?.length > 0 && (
+                                  {postDetails[post.id].tags?.filter(t => t).length > 0 && (
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.5rem' }}>
-                                      {postDetails[post.id].tags.map(t => (
-                                        <span key={t} style={{ padding: '3px 12px', background: 'var(--color-surface)', borderRadius: 12, fontSize: '0.75rem', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>{t}</span>
+                                      {postDetails[post.id].tags.filter(t => t).map(t => (
+                                        <span key={t} style={{ padding: '3px 10px', background: 'hsla(142,60%,45%,0.1)', borderRadius: 12, fontSize: '0.72rem', fontWeight: 600, color: 'var(--color-success)', border: '1px solid hsla(142,60%,45%,0.25)' }}>{t}</span>
                                       ))}
                                     </div>
                                   )}
