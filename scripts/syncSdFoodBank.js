@@ -412,7 +412,8 @@ ${closureLine}
 List EVERY occurrence of this schedule that falls within the window above (there may be one, several, or none). Rules:
 - Return ONLY valid JSON: a JSON array of occurrences, no markdown or explanation
 - Each item: {"start":"YYYY-MM-DDTHH:MM:00","end":"YYYY-MM-DDTHH:MM:00"} — all datetimes ISO 8601, local America/Los_Angeles time, no offset
-- If the end time is not stated, use null for "end"
+- If the schedule states an end time or a time range (e.g. "9:00 am - 12:00 pm", "from 2 to 4 pm", "9:00-11:00 AM"), you MUST populate "end" with that time — do not default to null when an end time is present in the text
+- Only use null for "end" when the schedule truly gives no end time or duration at all (e.g. just "at 7:00 PM" with nothing after it)
 - Only include occurrences strictly after "today" above and strictly before the window end
 - Convert "10:00am", "9:30 am", "2:00 p.m." etc. correctly to 24-hour format
 - Use day-of-week hints to resolve any ambiguity about which day is intended
@@ -420,7 +421,8 @@ List EVERY occurrence of this schedule that falls within the window above (there
 - If a reschedule note gives a specific replacement date for an occurrence in this window, use the replacement date instead of the normally-computed one
 - If the schedule text cannot be parsed at all, return {"parsed":false} instead of an array
 
-Example, two occurrences in window: [{"start":"2026-08-06T10:00:00","end":null},{"start":"2026-09-03T10:00:00","end":null}]
+Example, schedule states a time range ("9:00 am - 12:00 pm" etc.) — end MUST be populated: [{"start":"2026-08-04T09:00:00","end":"2026-08-04T12:00:00"}]
+Example, schedule states only a single time with no range — end is null: [{"start":"2026-08-06T10:00:00","end":null}]
 Example, none fall in window: []
 Example, unparseable: {"parsed":false}`
 
