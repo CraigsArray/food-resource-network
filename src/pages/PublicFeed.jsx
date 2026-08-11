@@ -1032,9 +1032,13 @@ export default function PublicFeed() {
                             })()}
                           </div>
 
-                          {/* Address */}
+                          {/* Address — translate="no" + notranslate keeps street names in English */}
                           {post.address && (
-                            <p style={{ fontSize: '0.83rem', color: 'var(--color-text-secondary)' }}>
+                            <p
+                              translate="no"
+                              className="notranslate"
+                              style={{ fontSize: '0.83rem', color: 'var(--color-text-secondary)' }}
+                            >
                               📍 {post.address}{post.city ? `, ${post.city}` : ''}
                             </p>
                           )}
