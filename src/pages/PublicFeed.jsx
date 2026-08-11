@@ -597,14 +597,18 @@ export default function PublicFeed() {
       {/* Content */}
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem' }}>
 
-        {/* ── Language selector ── */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.6rem',
-          marginBottom: '1rem',
-          flexWrap: 'wrap',
-        }}>
+        {/* ── Language selector — notranslate keeps labels in their native scripts ── */}
+        <div
+          translate="no"
+          className="notranslate"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            marginBottom: '1rem',
+            flexWrap: 'wrap',
+          }}
+        >
           <span style={{
             fontSize: '0.78rem', fontWeight: 600,
             color: 'var(--color-text-muted)',
