@@ -178,6 +178,51 @@ function Notification({ msg, onDone }) {
   )
 }
 
+// Supported languages for the public feed language picker
+const LANGUAGES = [
+  { code: 'en',    label: 'English' },
+  { code: 'es',    label: 'Español' },
+  { code: 'ar',    label: 'العربية' },
+  { code: 'so',    label: 'Soomaali' },
+  { code: 'tl',    label: 'Filipino' },
+  { code: 'vi',    label: 'Tiếng Việt' },
+  { code: 'zh-CN', label: '中文 (简体)' },
+  { code: 'ru',    label: 'Русский' },
+  { code: 'fa',    label: 'فارسی' },
+  { code: 'hy',    label: 'Հայերեն' },
+  { code: 'km',    label: 'ខ្មែរ' },
+]
+
+/**
+ * Trigger Google Translate to switch the page to `langCode`.
+ * Uses the `googtrans` cookie mechanism — identical to what the
+ * native Translate widget sets when the user picks a language.
+ * This approach works for async / React-rendered content because
+ * Google's MutationObserver re-scans the DOM whenever new nodes
+ * are inserted (e.g. after a Supabase data load).
+ */
+function applyGoogleTranslate(langCode) {
+  const cookieValue = langCode === 'en' ? '' : `/en/${langCode}`
+
+  // Set the cookie on both the current path and the root so the
+  // widget picks it up regardless of the SPA route.
+  const expiry = langCode === 'en'
+    ? 'Thu, 01 Jan 1970 00:00:00 GMT' // expire = clear
+    : 'Fri, 01 Jan 2100 00:00:00 GMT'
+  document.cookie = `googtrans=${cookieValue}; expires=${expiry}; path=/`
+  document.cookie = `googtrans=${cookieValue}; expires=${expiry}; path=/; domain=${location.hostname}`
+
+  // Ask the Google Translate widget to re-translate with the new cookie
+  const select = document.querySelector('.goog-te-combo')
+  if (select) {
+    select.value = langCode === 'en' ? '' : langCode
+    select.dispatchEvent(new Event('change'))
+  } else {
+    // Widget not ready yet — reload so the cookie is picked up on init
+    location.reload()
+  }
+}
+
 export default function PublicFeed() {
   const { session, isAppAdmin, memberships } = useAuth()
   const { theme, toggleTheme } = useTheme()
@@ -194,6 +239,12 @@ export default function PublicFeed() {
   const [feedCityFilter, setFeedCityFilter] = useState('')
   const [visibleCount, setVisibleCount] = useState(50)
   const [pinnedPost, setPinnedPost]     = useState(null)
+  // Read active language from the googtrans cookie on mount so the
+  // picker stays in sync if the page was reloaded after a language switch.
+  const [language, setLanguage] = useState(() => {
+    const match = document.cookie.match(/(?:^|;\s*)googtrans=\/en\/([^;]+)/)
+    return match ? match[1] : 'en'
+  })
   const mapRef           = useRef(null)
   const mapDivRef        = useRef(null)
   const markersRef       = useRef([])
@@ -546,6 +597,54 @@ export default function PublicFeed() {
       {/* Content */}
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem' }}>
 
+        {/* ── Language selector ── */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          marginBottom: '1rem',
+          flexWrap: 'wrap',
+        }}>
+          <span style={{
+            fontSize: '0.78rem', fontWeight: 600,
+            color: 'var(--color-text-muted)',
+            display: 'flex', alignItems: 'center', gap: '0.35rem',
+            flexShrink: 0,
+          }}>
+            🌐 Language:
+          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+            {LANGUAGES.map(lang => (
+              <button
+                key={lang.code}
+                onClick={() => {
+                  setLanguage(lang.code)
+                  applyGoogleTranslate(lang.code)
+                }}
+                style={{
+                  padding: '3px 12px',
+                  borderRadius: 20,
+                  fontSize: '0.76rem',
+                  fontWeight: language === lang.code ? 700 : 500,
+                  cursor: 'pointer',
+                  border: '1px solid',
+                  borderColor: language === lang.code ? 'var(--color-primary)' : 'var(--color-border)',
+                  background: language === lang.code
+                    ? 'hsla(28,95%,55%,0.15)'
+                    : 'var(--color-surface)',
+                  color: language === lang.code
+                    ? 'var(--color-primary)'
+                    : 'var(--color-text-secondary)',
+                  transition: 'all 140ms',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {lang.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Welcome blurb */}
         <div style={{
           marginBottom: '2rem',
@@ -798,6 +897,7 @@ export default function PublicFeed() {
         </div>
 
         {/* Feed */}
+
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
           <h2 style={{
             fontFamily: 'Outfit, sans-serif', fontSize: '1.35rem', fontWeight: 700,
