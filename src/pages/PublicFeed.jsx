@@ -200,22 +200,35 @@ const LANGUAGES = [
  * This approach works for async / React-rendered content because
  * Google's MutationObserver re-scans the DOM whenever new nodes
  * are inserted (e.g. after a Supabase data load).
+ *
+ * Switching TO a language: dispatch a change event on the hidden
+ * widget select — fast, no reload needed.
+ *
+ * Switching BACK to English: the widget cannot cleanly undo its
+ * own DOM rewrites at runtime, so we clear the cookie and reload.
+ * On a fresh load with no cookie the widget simply never activates.
  */
 function applyGoogleTranslate(langCode) {
-  const cookieValue = langCode === 'en' ? '' : `/en/${langCode}`
-
-  // Set the cookie on both the current path and the root so the
-  // widget picks it up regardless of the SPA route.
-  const expiry = langCode === 'en'
+  const isEnglish = langCode === 'en'
+  const cookieValue = isEnglish ? '' : `/en/${langCode}`
+  const expiry = isEnglish
     ? 'Thu, 01 Jan 1970 00:00:00 GMT' // expire = clear
     : 'Fri, 01 Jan 2100 00:00:00 GMT'
+
+  // Write the cookie on both root and current path
   document.cookie = `googtrans=${cookieValue}; expires=${expiry}; path=/`
   document.cookie = `googtrans=${cookieValue}; expires=${expiry}; path=/; domain=${location.hostname}`
 
-  // Ask the Google Translate widget to re-translate with the new cookie
+  if (isEnglish) {
+    // Always reload to restore the original un-translated DOM
+    location.reload()
+    return
+  }
+
+  // For non-English: drive the hidden widget select directly
   const select = document.querySelector('.goog-te-combo')
   if (select) {
-    select.value = langCode === 'en' ? '' : langCode
+    select.value = langCode
     select.dispatchEvent(new Event('change'))
   } else {
     // Widget not ready yet — reload so the cookie is picked up on init
@@ -912,6 +925,8 @@ export default function PublicFeed() {
           </h2>
           {posts.length > 0 && (
             <select
+              translate="no"
+              className="notranslate"
               value={feedCityFilter}
               onChange={e => { setFeedCityFilter(e.target.value); setVisibleCount(50); }}
               style={{
