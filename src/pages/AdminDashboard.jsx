@@ -76,12 +76,16 @@ export default function AdminDashboard() {
 
   // ── Recurrence pattern state ───────────────────────────────
   const [recurPattern, setRecurPattern] = useState({
-    frequency: 'weekly',   // 'daily' | 'weekly' | 'biweekly' | 'monthly'
-    days: [],              // days of week: 0=Sun,1=Mon,...,6=Sat
-    startDate: '',         // YYYY-MM-DD
-    endDate: '',           // YYYY-MM-DD
-    eventStartTime: '',    // HH:MM
-    eventEndTime: '',      // HH:MM
+    frequency: 'weekly',        // 'daily' | 'weekly' | 'biweekly' | 'monthly'
+    days: [],                   // days of week: 0=Sun,1=Mon,...,6=Sat
+    startDate: '',              // YYYY-MM-DD
+    endDate: '',                // YYYY-MM-DD
+    eventStartTime: '',         // HH:MM
+    eventEndTime: '',           // HH:MM
+    monthlyMode: 'date',        // 'date' = same day-of-month | 'weekday' = Nth weekday pattern
+    weekdayRules: [             // active when monthlyMode === 'weekday'
+      { occurrence: 1, weekday: 3 }, // default: 1st Wednesday
+    ],
   })
 
   const geocoderRef = useRef(null)
@@ -270,11 +274,79 @@ export default function AdminDashboard() {
     setOccurrences(prev => prev.map(o => o._key === key ? { ...o, [field]: value } : o))
   }
 
+  // ── Nth-weekday-of-month helper ───────────────────────────
+  // Mirrors the same algorithm in scripts/syncFeedingSanDiego.js.
+  // All Date constructors are local-time only — no UTC conversion.
+  // n = 1..4 (1st–4th) or -1 (last). Returns null when the Nth
+  // occurrence doesn't exist in that month (e.g. 5th Thursday).
+  function nthWeekdayOfMonth(year, month, weekday, n) {
+    if (n === -1) {
+      const last = new Date(year, month + 1, 0) // last calendar day of month
+      const back = (last.getDay() - weekday + 7) % 7
+      return new Date(year, month + 1, -back)   // walks back to target weekday
+    }
+    const first  = new Date(year, month, 1)
+    const offset = (weekday - first.getDay() + 7) % 7
+    const d      = new Date(year, month, 1 + offset + (n - 1) * 7)
+    return d.getMonth() === month ? d : null    // guard: 5th occurrence may not exist
+  }
+
   function generateFromPattern() {
-    const { frequency, days, startDate, endDate, eventStartTime, eventEndTime } = recurPattern
+    const { frequency, days, startDate, endDate, eventStartTime, eventEndTime,
+            monthlyMode, weekdayRules } = recurPattern
     if (!startDate || !endDate) return
     if ((frequency === 'weekly' || frequency === 'biweekly') && days.length === 0) return
+    if (frequency === 'monthly' && monthlyMode === 'weekday' && weekdayRules.length === 0) return
 
+    // ── Weekday-of-month mode: month-spanning loop ────────────
+    // Bypasses the daily walk — generates dates directly from each
+    // month's Nth-weekday calculation, then merges and sorts all rules.
+    if (frequency === 'monthly' && monthlyMode === 'weekday') {
+      // Use midnight local time so comparisons are day-accurate without
+      // risk of a DST hour pushing the date into the previous day.
+      const origin     = new Date(startDate + 'T00:00:00')
+      const endBound   = new Date(endDate   + 'T23:59:59')
+      const startYear  = origin.getFullYear()
+      const startMonth = origin.getMonth()
+      const endYear    = endBound.getFullYear()
+      const endMonth   = endBound.getMonth()
+      const totalMonths = (endYear - startYear) * 12 + (endMonth - startMonth)
+      const dates = []
+
+      for (let i = 0; i <= totalMonths; i++) {
+        const probeYear  = startYear + Math.floor((startMonth + i) / 12)
+        const probeMonth = (startMonth + i) % 12
+        for (const rule of weekdayRules) {
+          const d = nthWeekdayOfMonth(probeYear, probeMonth, rule.weekday, rule.occurrence)
+          if (!d) continue                      // ordinal doesn't exist this month
+          if (d < origin || d > endBound) continue
+          const y  = d.getFullYear()
+          const mo = String(d.getMonth() + 1).padStart(2, '0')
+          const dd = String(d.getDate()).padStart(2, '0')
+          const ds = `${y}-${mo}-${dd}`
+          dates.push({
+            _key:       crypto.randomUUID(),
+            id:         null,
+            start_time: eventStartTime ? `${ds}T${eventStartTime}` : '',
+            end_time:   eventEndTime   ? `${ds}T${eventEndTime}`   : '',
+          })
+        }
+      }
+
+      // Sort chronologically then deduplicate (two rules could land on the same date).
+      dates.sort((a, b) => a.start_time.localeCompare(b.start_time))
+      const seen   = new Set()
+      const unique = dates.filter(o => {
+        const key = o.start_time || o._key
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+      if (unique.length > 0) setOccurrences(unique)
+      return
+    }
+
+    // ── Existing daily-walk logic (daily / weekly / biweekly / monthly-date) ──
     const results = []
     const origin = new Date(startDate + 'T12:00:00')
     const end    = new Date(endDate   + 'T12:00:00')
@@ -802,6 +874,86 @@ export default function AdminDashboard() {
                           })}
                         </div>
                       </div>
+                    )}
+
+                    {/* Monthly-mode selector (monthly only) */}
+                    {recurPattern.frequency === 'monthly' && (
+                      <>
+                        <div>
+                          <label style={labelSt}>Monthly pattern</label>
+                          <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                            {[['date', 'Same date each month'], ['weekday', 'Same weekday pattern']].map(([val, lbl]) => (
+                              <button key={val} type="button" onClick={() => rpf('monthlyMode', val)} style={{
+                                padding: '4px 14px', borderRadius: 20, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', border: '1px solid',
+                                background:   recurPattern.monthlyMode === val ? 'var(--color-primary)' : 'var(--color-surface)',
+                                color:        recurPattern.monthlyMode === val ? 'white' : 'var(--color-text-muted)',
+                                borderColor:  recurPattern.monthlyMode === val ? 'var(--color-primary)' : 'var(--color-border)',
+                              }}>{lbl}</button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Weekday-rule rows — shown when mode is 'weekday' */}
+                        {recurPattern.monthlyMode === 'weekday' && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <label style={labelSt}>Weekday rules</label>
+                            {recurPattern.weekdayRules.map((rule, idx) => (
+                              <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                {/* Occurrence dropdown: 1st / 2nd / 3rd / 4th / Last */}
+                                <select
+                                  value={rule.occurrence}
+                                  onChange={e => rpf('weekdayRules', recurPattern.weekdayRules.map((r, i) =>
+                                    i === idx ? { ...r, occurrence: Number(e.target.value) } : r
+                                  ))}
+                                  className="form-input"
+                                  style={{ width: 90, flexShrink: 0 }}
+                                >
+                                  {[[1,'1st'],[2,'2nd'],[3,'3rd'],[4,'4th'],[-1,'Last']].map(([v, l]) => (
+                                    <option key={v} value={v}>{l}</option>
+                                  ))}
+                                </select>
+                                {/* Weekday dropdown: Sunday – Saturday */}
+                                <select
+                                  value={rule.weekday}
+                                  onChange={e => rpf('weekdayRules', recurPattern.weekdayRules.map((r, i) =>
+                                    i === idx ? { ...r, weekday: Number(e.target.value) } : r
+                                  ))}
+                                  className="form-input"
+                                  style={{ flex: 1, minWidth: 120 }}
+                                >
+                                  {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((day, i) => (
+                                    <option key={i} value={i}>{day}</option>
+                                  ))}
+                                </select>
+                                {/* Remove button — only shown when there is more than one rule */}
+                                {recurPattern.weekdayRules.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => rpf('weekdayRules', recurPattern.weekdayRules.filter((_, i) => i !== idx))}
+                                    title="Remove this rule"
+                                    style={{
+                                      width: 28, height: 28, borderRadius: '50%', border: 'none', flexShrink: 0,
+                                      background: 'hsla(0,84%,60%,0.12)', color: 'var(--color-error)',
+                                      cursor: 'pointer', fontWeight: 700, fontSize: '1rem',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    }}
+                                  >×</button>
+                                )}
+                              </div>
+                            ))}
+                            {/* Add-another link */}
+                            <button
+                              type="button"
+                              onClick={() => rpf('weekdayRules', [...recurPattern.weekdayRules, { occurrence: 1, weekday: 3 }])}
+                              style={{
+                                alignSelf: 'flex-start', fontSize: '0.8rem', fontWeight: 600,
+                                color: 'var(--color-primary)', background: 'transparent',
+                                border: 'none', cursor: 'pointer', padding: '2px 0',
+                              }}
+                            >+ Add another</button>
+                          </div>
+                        )}
+                      </>
                     )}
 
                     {/* Date range */}
