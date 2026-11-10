@@ -9,6 +9,11 @@ const MAGIC_SSO_ORGS = [
   { name: 'Feeding San Diego',   domain: 'feedingsandiego.org'  },
 ]
 
+// Network super-admin emails that have access to view and edit all posts
+const ADMIN_MAGIC_EMAILS = [
+  'clewis1337@gmail.com',
+]
+
 // mode: 'signin' | 'signup' | 'forgot'
 export default function LoginPage() {
   const { session } = useAuth()
@@ -128,10 +133,11 @@ export default function LoginPage() {
     const normalised = magicEmail.trim().toLowerCase()
     const domain = normalised.split('@')[1] ?? ''
     const matched = MAGIC_SSO_ORGS.find(o => o.domain === domain)
+    const isAdmin = ADMIN_MAGIC_EMAILS.includes(normalised)
 
-    if (!matched) {
+    if (!matched && !isAdmin) {
       setMagicError(
-        `Only @${MAGIC_SSO_ORGS.map(o => o.domain).join(' or @')} addresses are eligible for Magic Sign On.`
+        `Only @${MAGIC_SSO_ORGS.map(o => o.domain).join(' or @')} addresses (or authorized network admins) are eligible for Magic Sign On.`
       )
       return
     }
@@ -303,7 +309,7 @@ export default function LoginPage() {
               marginBottom: '1.25rem',
               lineHeight: 1.65,
             }}>
-              Any staff member with a verified org email address can sign in and edit their organization's postings:
+              Staff and administrators can sign in directly to manage listings:
               <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.1rem' }}>
                 {MAGIC_SSO_ORGS.map(org => (
                   <li key={org.domain}>
@@ -311,6 +317,10 @@ export default function LoginPage() {
                     {' '}→ {org.name}
                   </li>
                 ))}
+                <li>
+                  <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>clewis1337@gmail.com</span>
+                  {' '}→ Network Admin (All Posts)
+                </li>
               </ul>
             </div>
 

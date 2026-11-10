@@ -3,6 +3,8 @@ import { supabase } from '../supabase'
 
 const AuthContext = createContext(null)
 
+const SUPER_ADMIN_EMAILS = ['clewis1337@gmail.com']
+
 export function AuthProvider({ children }) {
   const [session, setSession]       = useState(null)
   const [user, setUser]             = useState(null)
@@ -11,7 +13,7 @@ export function AuthProvider({ children }) {
   const [isAppAdmin, setIsAppAdmin] = useState(false)
   const [loading, setLoading]       = useState(true)
 
-  async function loadUserData(userId) {
+  async function loadUserData(userId, userEmail) {
     const [{ data: prof }, { data: mems }, { data: adminRow }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).single(),
       supabase
@@ -22,7 +24,8 @@ export function AuthProvider({ children }) {
     ])
     setProfile(prof ?? null)
     setMemberships(mems ?? [])
-    setIsAppAdmin(!!adminRow)
+    const isAdmin = !!adminRow || (userEmail && SUPER_ADMIN_EMAILS.includes(userEmail.toLowerCase()))
+    setIsAppAdmin(isAdmin)
   }
 
   useEffect(() => {
@@ -30,7 +33,7 @@ export function AuthProvider({ children }) {
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
-        loadUserData(session.user.id).finally(() => setLoading(false))
+        loadUserData(session.user.id, session.user.email).finally(() => setLoading(false))
       } else {
         setLoading(false)
       }
@@ -41,7 +44,7 @@ export function AuthProvider({ children }) {
       setUser(session?.user ?? null)
       if (session?.user) {
         setLoading(true)
-        loadUserData(session.user.id).finally(() => setLoading(false))
+        loadUserData(session.user.id, session.user.email).finally(() => setLoading(false))
       } else {
         setProfile(null)
         setMemberships([])

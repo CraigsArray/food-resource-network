@@ -34,6 +34,11 @@ VALUES (
 ON CONFLICT (domain) DO UPDATE
   SET name = EXCLUDED.name,
       is_verified = true;
+
+-- Grant clewis1337@gmail.com network administrator rights (view and edit ALL posts)
+INSERT INTO app_admins (user_id)
+SELECT id FROM auth.users WHERE lower(email) = 'clewis1337@gmail.com'
+ON CONFLICT (user_id) DO NOTHING;
 ```
 
 After running this, any user who signs in with an `@sandiegofoodbank.org` or
