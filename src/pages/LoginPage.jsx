@@ -3,16 +3,30 @@ import { Navigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { useAuth } from '../contexts/AuthContext'
 
+// Orgs that support Magic Sign On by email domain
+const MAGIC_SSO_ORGS = [
+  { name: 'San Diego Food Bank', domain: 'sandiegofoodbank.org' },
+  { name: 'Feeding San Diego',   domain: 'feedingsandiego.org'  },
+]
+
 // mode: 'signin' | 'signup' | 'forgot'
 export default function LoginPage() {
   const { session } = useAuth()
-  const [mode, setMode]       = useState('signin')
-  const [email, setEmail]     = useState('')
+
+  // --- Provider sign-in state ---
+  const [mode, setMode]         = useState('signin')
+  const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
-  const [notice, setNotice]   = useState('')
+  const [confirm, setConfirm]   = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
+  const [notice, setNotice]     = useState('')
+
+  // --- Magic Sign On state ---
+  const [magicEmail, setMagicEmail]   = useState('')
+  const [magicLoading, setMagicLoading] = useState(false)
+  const [magicError, setMagicError]   = useState('')
+  const [magicSent, setMagicSent]     = useState(false)
 
   if (session) return <Navigate to="/admin" replace />
 
@@ -106,6 +120,36 @@ export default function LoginPage() {
     }
   }
 
+  async function handleMagicSignOn(e) {
+    e.preventDefault()
+    setMagicError('')
+    setMagicSent(false)
+
+    const normalised = magicEmail.trim().toLowerCase()
+    const domain = normalised.split('@')[1] ?? ''
+    const matched = MAGIC_SSO_ORGS.find(o => o.domain === domain)
+
+    if (!matched) {
+      setMagicError(
+        `Only @${MAGIC_SSO_ORGS.map(o => o.domain).join(' or @')} addresses are eligible for Magic Sign On.`
+      )
+      return
+    }
+
+    setMagicLoading(true)
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: normalised,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    })
+    setMagicLoading(false)
+
+    if (otpError) {
+      setMagicError(otpError.message)
+    } else {
+      setMagicSent(true)
+    }
+  }
+
   const titles = {
     signin: 'Sign in',
     signup: 'Create account',
@@ -113,8 +157,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.5rem', background: 'var(--color-bg-dark)' }}>
-      <div style={{ width: '100%', maxWidth: 420 }}>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem 1.5rem',
+      background: 'var(--color-bg-dark)',
+    }}>
+      <div style={{ width: '100%', maxWidth: 900 }}>
 
         {/* Branding */}
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
@@ -133,14 +184,21 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Card */}
-        <div style={{ background: 'var(--color-bg-medium)', border: '1px solid var(--color-border)', borderRadius: 20, padding: '2rem', boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
+        {/* Two-column card row */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+          gap: '1.5rem',
+          alignItems: 'start',
+        }}>
 
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
-            {titles[mode]}
-          </h2>
+          {/* ── Left: Provider sign-in ── */}
+          <div style={{ background: 'var(--color-bg-medium)', border: '1px solid var(--color-border)', borderRadius: 20, padding: '2rem', boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
+              {titles[mode]}
+            </h2>
 
-          <form
+            <form
               onSubmit={mode === 'signin' ? handleSignIn : mode === 'signup' ? handleSignUp : handleForgot}
               style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
             >
@@ -213,7 +271,112 @@ export default function LoginPage() {
                 )}
               </div>
             </form>
-        </div>
+          </div>
+
+          {/* ── Right: Magic Sign On ── */}
+          <div style={{
+            background: 'var(--color-bg-medium)',
+            border: '1px solid hsla(210,90%,55%,0.35)',
+            borderRadius: 20,
+            padding: '2rem',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.07)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <span style={{ fontSize: '1.25rem' }}>✨</span>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
+                Magic Sign On
+              </h2>
+            </div>
+            <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', marginBottom: '0.6rem', lineHeight: 1.6 }}>
+              For <strong style={{ color: 'var(--color-text-primary)' }}>San Diego Food Bank</strong> and{' '}
+              <strong style={{ color: 'var(--color-text-primary)' }}>Feeding San Diego</strong>
+            </p>
+
+            {/* Org access explanation */}
+            <div style={{
+              fontSize: '0.8rem',
+              color: 'var(--color-text-secondary)',
+              background: 'hsla(210,90%,55%,0.06)',
+              border: '1px solid hsla(210,90%,55%,0.18)',
+              borderRadius: 10,
+              padding: '0.75rem 0.9rem',
+              marginBottom: '1.25rem',
+              lineHeight: 1.65,
+            }}>
+              Any staff member with a verified org email address can sign in and edit their organization's postings:
+              <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.1rem' }}>
+                {MAGIC_SSO_ORGS.map(org => (
+                  <li key={org.domain}>
+                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>@{org.domain}</span>
+                    {' '}→ {org.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {magicSent ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '1.5rem 1rem',
+                background: 'hsla(140,60%,50%,0.07)',
+                border: '1px solid hsla(140,60%,50%,0.25)',
+                borderRadius: 12,
+              }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📬</div>
+                <p style={{ fontWeight: 700, color: 'var(--color-text-primary)', margin: '0 0 0.3rem' }}>Check your inbox</p>
+                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.6 }}>
+                  A sign-in link has been sent to <strong>{magicEmail}</strong>. Click it to access the dashboard — no password needed.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setMagicSent(false); setMagicEmail('') }}
+                  style={{ ...linkBtnStyle, marginTop: '1rem', fontSize: '0.8rem' }}
+                >
+                  Use a different email
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleMagicSignOn} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={labelStyle}>Work email address</label>
+                  <input
+                    className="form-input"
+                    type="email"
+                    required
+                    placeholder="you@sandiegofoodbank.org"
+                    value={magicEmail}
+                    onChange={e => { setMagicEmail(e.target.value); setMagicError('') }}
+                  />
+                </div>
+
+                {magicError && <p style={{ color: 'var(--color-error)', fontSize: '0.82rem', margin: 0 }}>{magicError}</p>}
+
+                <button
+                  type="submit"
+                  disabled={magicLoading}
+                  style={{
+                    width: '100%', padding: '0.85rem',
+                    background: 'linear-gradient(135deg, #2563eb, #3b82f6)',
+                    border: 'none', borderRadius: 12,
+                    color: '#fff', fontWeight: 800, fontSize: '0.95rem',
+                    letterSpacing: '0.4px', textTransform: 'uppercase',
+                    cursor: magicLoading ? 'not-allowed' : 'pointer',
+                    opacity: magicLoading ? 0.6 : 1,
+                    boxShadow: '0 4px 16px rgba(37,99,235,0.3)',
+                    transition: 'all 200ms ease',
+                  }}
+                >
+                  {magicLoading ? 'Sending…' : 'Send Magic Link'}
+                </button>
+
+                <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
+                  We'll email you a one-time sign-in link. No password required.
+                </p>
+              </form>
+            )}
+          </div>
+
+        </div>{/* end two-column grid */}
 
         <p style={{ textAlign: 'center', marginTop: '1.75rem', fontSize: '0.85rem' }}>
           <a href="/" style={{ color: 'var(--color-text-muted)', textDecoration: 'none', fontWeight: 500 }}>← Back to public feed</a>
