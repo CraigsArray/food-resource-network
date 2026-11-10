@@ -694,160 +694,176 @@ export default function PublicFeed() {
           </p>
         </div>
 
-        {/* Pinned announcement + partner org links */}
-        {pinnedPost ? (
-          /* Two-column: pinned card left, partner orgs right */
+        {/* Reliable Food Providers — always full-width on top */}
+        <div style={{
+          padding: '1rem 1.25rem',
+          background: 'var(--color-bg-medium)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 14,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.75rem',
+          marginBottom: '1rem',
+        }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)', textAlign: 'center' }}>Reliable Food Providers</span>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {/* SD Food Bank */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', flex: '1 1 200px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
+                  <img
+                    src="https://www.vikingcold.com/wp-content/uploads/2019/11/san-diego-food-bank.png"
+                    alt="San Diego Food Bank"
+                    style={{ height: 28, width: 'auto', display: 'block', objectFit: 'contain' }}
+                  />
+                </a>
+                <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--color-text-primary)' }}>San Diego Food Bank</span>
+              </div>
+              <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
+                County-wide food distributions and pantries. Their listings on this site are sourced directly from sandiegofoodbank.org.
+              </p>
+            </div>
+            {/* Feeding San Diego */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', flex: '1 1 200px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
+                  <img
+                    src="https://feedingsandiego.org/wp-content/uploads/2021/03/Feeding-San-Diego-Logo-Color.png"
+                    alt="Feeding San Diego"
+                    style={{ height: 28, width: 'auto', display: 'block', objectFit: 'contain' }}
+                  />
+                </a>
+                <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--color-text-primary)' }}>Feeding San Diego</span>
+              </div>
+              <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
+                Surplus food rescue and community access points. Their listings on this site are sourced directly from feedingsandiego.org.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Announcement cards row — DB pinned post (left) + hardcoded volunteer card (right) */}
+        {(pinnedPost || true) && (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: '1rem',
             marginBottom: '2rem',
           }}>
 
-            {/* Left: Pinned announcement card */}
-            <div style={{
-              padding: '1.25rem',
-              background: isDark ? 'hsla(28,95%,55%,0.07)' : 'hsla(28,95%,55%,0.05)',
-              border: '1px solid hsla(28,95%,55%,0.28)',
-              borderRadius: 14,
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem',
-            }}>
-              {/* Posted date — small, top-right corner */}
-              <span style={{
-                position: 'absolute', top: '0.75rem', right: '1rem',
-                fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 500,
+            {/* Left: DB-driven pinned announcement (only shown when one exists) */}
+            {pinnedPost && (
+              <div style={{
+                padding: '1.25rem',
+                background: isDark ? 'hsla(28,95%,55%,0.07)' : 'hsla(28,95%,55%,0.05)',
+                border: '1px solid hsla(28,95%,55%,0.28)',
+                borderRadius: 14,
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
               }}>
-                {new Date(pinnedPost.posted_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <span style={{ fontSize: '1rem' }}>📣</span>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--color-primary)' }}>Announcements</span>
-              </div>
-              <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.3, paddingRight: '5rem' }}>
-                {pinnedPost.link_url ? (
+                {/* Posted date — small, top-right corner */}
+                <span style={{
+                  position: 'absolute', top: '0.75rem', right: '1rem',
+                  fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 500,
+                }}>
+                  {new Date(pinnedPost.posted_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '1rem' }}>📣</span>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--color-primary)' }}>Announcement</span>
+                </div>
+                <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.3, paddingRight: '5rem' }}>
+                  {pinnedPost.link_url ? (
+                    <a
+                      href={pinnedPost.link_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--color-text-primary)', textDecoration: 'none' }}
+                      onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
+                      onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-primary)'}
+                    >{pinnedPost.title}</a>
+                  ) : pinnedPost.title}
+                </p>
+                {pinnedPost.description && (
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.6 }}>
+                    {pinnedPost.description}
+                  </p>
+                )}
+                {pinnedPost.link_url && (
                   <a
                     href={pinnedPost.link_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: 'var(--color-text-primary)', textDecoration: 'none' }}
-                    onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-primary)'}
-                  >{pinnedPost.title}</a>
-                ) : pinnedPost.title}
-              </p>
-              {pinnedPost.description && (
-                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.6 }}>
-                  {pinnedPost.description}
-                </p>
-              )}
-              {pinnedPost.link_url && (
-                <a
-                  href={pinnedPost.link_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none', marginTop: 'auto', paddingTop: '0.25rem' }}
-                >
-                  Learn more →
-                </a>
-              )}
-            </div>
+                    style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none', marginTop: 'auto', paddingTop: '0.25rem' }}
+                  >
+                    Learn more →
+                  </a>
+                )}
+              </div>
+            )}
 
-            {/* Right: Combined partner orgs box */}
+            {/* Right: Hardcoded volunteer opportunity card */}
             <div style={{
-              padding: '1rem 1.25rem',
-              background: 'var(--color-bg-medium)',
-              border: '1px solid var(--color-border)',
+              padding: '1.25rem',
+              background: isDark ? 'hsla(210,90%,55%,0.07)' : 'hsla(210,90%,55%,0.05)',
+              border: '1px solid hsla(210,90%,55%,0.28)',
               borderRadius: 14,
               display: 'flex',
               flexDirection: 'column',
-              gap: '0.75rem',
+              gap: '0.5rem',
             }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)', textAlign: 'center' }}>Reliable Food Providers</span>
-              {/* SD Food Bank */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
-                    <img
-                      src="https://www.vikingcold.com/wp-content/uploads/2019/11/san-diego-food-bank.png"
-                      alt="San Diego Food Bank"
-                      style={{ height: 28, width: 'auto', display: 'block', objectFit: 'contain' }}
-                    />
-                  </a>
-                  <span style={{ fontWeight: 700, fontSize: '0.82rem' }}><a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-text-primary)', textDecoration: 'none' }}>San Diego Food Bank</a></span>
-                </div>
-                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
-                  County-wide food distributions and pantries. Their listings on this site are sourced directly from sandiegofoodbank.org.
-                </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ fontSize: '1rem' }}>🤝</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--color-primary)' }}>Volunteer Opportunity</span>
               </div>
-              <div style={{ height: 1, background: 'var(--color-border)' }} />
-              {/* Feeding San Diego */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
-                    <img
-                      src="https://feedingsandiego.org/wp-content/uploads/2021/03/Feeding-San-Diego-Logo-Color.png"
-                      alt="Feeding San Diego"
-                      style={{ height: 28, width: 'auto', display: 'block', objectFit: 'contain' }}
-                    />
-                  </a>
-                  <span style={{ fontWeight: 700, fontSize: '0.82rem' }}><a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-text-primary)', textDecoration: 'none' }}>Feeding San Diego</a></span>
-                </div>
-                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
-                  Surplus food rescue and community access points. Their listings on this site are sourced directly from feedingsandiego.org.
-                </p>
+              <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.3 }}>
+                SD Food Bank — Senior Food Distribution Volunteers Needed
+              </p>
+              <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.6 }}>
+                The Jacobs &amp; Cushman San Diego Food Bank is seeking volunteers to assist with senior food distribution events. Must be 16+ and non-court-ordered.
+              </p>
+              {/* Event details */}
+              <div style={{
+                fontSize: '0.82rem',
+                color: 'var(--color-text-secondary)',
+                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                borderRadius: 8,
+                padding: '0.6rem 0.75rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.2rem',
+              }}>
+                <div><strong style={{ color: 'var(--color-text-primary)' }}>📍 Senior Food Distribution – Meridian Baptist Church</strong></div>
+                <div>📅 November 13, 2026 &nbsp;|&nbsp; 12:00 pm – 3:30 pm</div>
+                <div>📌 660 S. 3rd St, El Cajon, CA 92019</div>
               </div>
-            </div>
-          </div>
-        ) : (
-          /* No pinned post — partner orgs full-width, both orgs side by side */
-          <div style={{
-            padding: '1rem 1.25rem',
-            background: 'var(--color-bg-medium)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 14,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-            marginBottom: '2rem',
-          }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-muted)', textAlign: 'center' }}>Reliable Food Providers</span>
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-              {/* SD Food Bank */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', flex: '1 1 200px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <a href="https://www.sandiegofoodbank.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
-                    <img
-                      src="https://www.vikingcold.com/wp-content/uploads/2019/11/san-diego-food-bank.png"
-                      alt="San Diego Food Bank"
-                      style={{ height: 28, width: 'auto', display: 'block', objectFit: 'contain' }}
-                    />
-                  </a>
-                  <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--color-text-primary)' }}>San Diego Food Bank</span>
-                </div>
-                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
-                  County-wide food distributions and pantries. Their listings on this site are sourced directly from sandiegofoodbank.org.
-                </p>
-              </div>
-              {/* Feeding San Diego */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', flex: '1 1 200px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <a href="https://feedingsandiego.org" target="_blank" rel="noopener noreferrer" style={{ display: 'block', lineHeight: 0 }}>
-                    <img
-                      src="https://feedingsandiego.org/wp-content/uploads/2021/03/Feeding-San-Diego-Logo-Color.png"
-                      alt="Feeding San Diego"
-                      style={{ height: 28, width: 'auto', display: 'block', objectFit: 'contain' }}
-                    />
-                  </a>
-                  <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--color-text-primary)' }}>Feeding San Diego</span>
-                </div>
-                <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0, textAlign: 'center' }}>
-                  Surplus food rescue and community access points. Their listings on this site are sourced directly from feedingsandiego.org.
-                </p>
+              <ul style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', margin: '0.1rem 0 0', paddingLeft: '1.1rem', lineHeight: 1.7 }}>
+                <li>Closed-toe shoes required; event held outdoors</li>
+                <li>Must be able to lift up to 40 lbs if needed</li>
+                <li>Non-court-ordered individuals only</li>
+              </ul>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.25rem' }}>
+                <a
+                  href="https://sdfb.volunteerhub.com/vv2/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}
+                >
+                  Sign in to your volunteer account →
+                </a>
+                <a
+                  href="https://sdfb.volunteerhub.com/vv2/event/64d1d1bb-68a1-4b25-9940-4ced453a0f23"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}
+                >
+                  Sign up for this shift →
+                </a>
               </div>
             </div>
+
           </div>
         )}
 
@@ -907,7 +923,7 @@ export default function PublicFeed() {
                   <p style={{ color: 'var(--color-text-muted)' }}>Loading calendar…</p>
                 </div>
               }>
-                <CalendarPanel posts={posts} onSelectEvent={handleCalendarEventClick} />
+                <CalendarPanel posts={posts} onSelectEvent={handleCalendarEventClick} cityFilter={feedCityFilter} />
               </Suspense>
             )}
           </div>

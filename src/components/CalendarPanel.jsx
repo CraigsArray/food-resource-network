@@ -28,11 +28,57 @@ function CalendarEvent({ event }) {
 }
 
 /**
+ * Custom toolbar that appends "(City only)" to the month/date label when a city
+ * filter is active, and otherwise behaves identically to the default toolbar.
+ */
+function FilteredToolbar({ cityFilter, label, onNavigate, onView, view, views }) {
+  return (
+    <div className="rbc-toolbar">
+      <span className="rbc-btn-group">
+        <button onClick={() => onNavigate('TODAY')}>Today</button>
+        <button onClick={() => onNavigate('PREV')}>Back</button>
+        <button onClick={() => onNavigate('NEXT')}>Next</button>
+      </span>
+      <span className="rbc-toolbar-label">
+        {cityFilter ? (
+          <>
+            {label}{' '}
+            <span style={{ fontWeight: 500, opacity: 0.65, fontSize: '0.85em' }}>
+              ({cityFilter} only)
+            </span>
+          </>
+        ) : label}
+      </span>
+      <span className="rbc-btn-group">
+        {views.map(v => (
+          <button
+            key={v}
+            className={view === v ? 'rbc-active' : ''}
+            onClick={() => onView(v)}
+          >
+            {v.charAt(0).toUpperCase() + v.slice(1)}
+          </button>
+        ))}
+      </span>
+    </div>
+  )
+}
+
+/**
  * CalendarPanel — lazy-loaded by PublicFeed when the Calendar tab is first opened.
  * Keeping react-big-calendar in this module means Vite can split it into a separate
  * chunk (~200 KB) that is never downloaded by users who only use the map view.
+ *
+ * Props:
+ *   posts        — full post array (all cities)
+ *   onSelectEvent — click handler passed from PublicFeed
+ *   cityFilter   — currently selected city string, or '' for all cities
  */
-export default function CalendarPanel({ posts, onSelectEvent }) {
+export default function CalendarPanel({ posts, onSelectEvent, cityFilter = '' }) {
+  const visiblePosts = cityFilter
+    ? posts.filter(p => p.city?.trim().toLowerCase() === cityFilter.toLowerCase())
+    : posts
+
   return (
     <div style={{ height: 560, background: 'var(--color-bg-medium)', padding: '0.75rem' }}>
       <style>{`
@@ -58,7 +104,7 @@ export default function CalendarPanel({ posts, onSelectEvent }) {
       `}</style>
       <Calendar
         localizer={localizer}
-        events={posts.filter(p => p.start_time).map(p => ({
+        events={visiblePosts.filter(p => p.start_time).map(p => ({
           id:       p.id,
           title:    p.title,
           start:    parseNaiveDate(p.start_time),
@@ -69,7 +115,10 @@ export default function CalendarPanel({ posts, onSelectEvent }) {
         views={['month', 'agenda']}
         style={{ height: '100%' }}
         onSelectEvent={onSelectEvent}
-        components={{ event: CalendarEvent }}
+        components={{
+          event: CalendarEvent,
+          toolbar: (props) => <FilteredToolbar {...props} cityFilter={cityFilter} />,
+        }}
         popup
       />
     </div>
