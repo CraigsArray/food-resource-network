@@ -742,130 +742,113 @@ export default function PublicFeed() {
           </div>
         </div>
 
-        {/* Announcement cards row — DB pinned post (left) + hardcoded volunteer card (right) */}
-        {(pinnedPost || true) && (
+        {/* Announcement cards row — two hardcoded cards side by side */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '1rem',
+          marginBottom: '2rem',
+        }}>
+
+          {/* Left: Salvation Army Thanksgiving event */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '1rem',
-            marginBottom: '2rem',
+            padding: '1.25rem',
+            background: isDark ? 'hsla(28,95%,55%,0.07)' : 'hsla(28,95%,55%,0.05)',
+            border: '1px solid hsla(28,95%,55%,0.28)',
+            borderRadius: 14,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
           }}>
-
-            {/* Left: DB-driven pinned announcement (only shown when one exists) */}
-            {pinnedPost && (
-              <div style={{
-                padding: '1.25rem',
-                background: isDark ? 'hsla(28,95%,55%,0.07)' : 'hsla(28,95%,55%,0.05)',
-                border: '1px solid hsla(28,95%,55%,0.28)',
-                borderRadius: 14,
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-              }}>
-                {/* Posted date — small, top-right corner */}
-                <span style={{
-                  position: 'absolute', top: '0.75rem', right: '1rem',
-                  fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 500,
-                }}>
-                  {new Date(pinnedPost.posted_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ fontSize: '1rem' }}>📣</span>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--color-primary)' }}>Announcement</span>
-                </div>
-                <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.3, paddingRight: '5rem' }}>
-                  {pinnedPost.link_url ? (
-                    <a
-                      href={pinnedPost.link_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'var(--color-text-primary)', textDecoration: 'none' }}
-                      onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
-                      onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-primary)'}
-                    >{pinnedPost.title}</a>
-                  ) : pinnedPost.title}
-                </p>
-                {pinnedPost.description && (
-                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.6 }}>
-                    {pinnedPost.description}
-                  </p>
-                )}
-                {pinnedPost.link_url && (
-                  <a
-                    href={pinnedPost.link_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none', marginTop: 'auto', paddingTop: '0.25rem' }}
-                  >
-                    Learn more →
-                  </a>
-                )}
-              </div>
-            )}
-
-            {/* Right: Hardcoded volunteer opportunity card */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span style={{ fontSize: '1rem' }}>📣</span>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--color-primary)' }}>Announcement</span>
+            </div>
+            <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.3 }}>
+              Salvation Army — Free Thanksgiving Drive-Through Meal
+            </p>
+            <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.6 }}>
+              Join us for a free drive-through Thanksgiving meal. First come, first served — no reservation needed.
+            </p>
+            {/* Event details box */}
             <div style={{
-              padding: '1.25rem',
-              background: isDark ? 'hsla(210,90%,55%,0.07)' : 'hsla(210,90%,55%,0.05)',
-              border: '1px solid hsla(210,90%,55%,0.28)',
-              borderRadius: 14,
+              fontSize: '0.82rem',
+              color: 'var(--color-text-secondary)',
+              background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+              borderRadius: 8,
+              padding: '0.6rem 0.75rem',
               display: 'flex',
               flexDirection: 'column',
-              gap: '0.5rem',
+              gap: '0.2rem',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <span style={{ fontSize: '1rem' }}>🤝</span>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--color-primary)' }}>Volunteer Opportunity</span>
-              </div>
-              <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.3 }}>
-                SD Food Bank — Senior Food Distribution Volunteers Needed
-              </p>
-              <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.6 }}>
-                The Jacobs &amp; Cushman San Diego Food Bank is seeking volunteers to assist with senior food distribution events. Must be 16+ and non-court-ordered.
-              </p>
-              {/* Event details */}
-              <div style={{
-                fontSize: '0.82rem',
-                color: 'var(--color-text-secondary)',
-                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                borderRadius: 8,
-                padding: '0.6rem 0.75rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.2rem',
-              }}>
-                <div><strong style={{ color: 'var(--color-text-primary)' }}>📍 Senior Food Distribution – Meridian Baptist Church</strong></div>
-                <div>📅 November 13, 2026 &nbsp;|&nbsp; 12:00 pm – 3:30 pm</div>
-                <div>📌 660 S. 3rd St, El Cajon, CA 92019</div>
-              </div>
-              <ul style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', margin: '0.1rem 0 0', paddingLeft: '1.1rem', lineHeight: 1.7 }}>
-                <li>Closed-toe shoes required; event held outdoors</li>
-                <li>Must be able to lift up to 40 lbs if needed</li>
-                <li>Non-court-ordered individuals only</li>
-              </ul>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.25rem' }}>
-                <a
-                  href="https://sdfb.volunteerhub.com/vv2/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}
-                >
-                  Sign in to your volunteer account →
-                </a>
-                <a
-                  href="https://sdfb.volunteerhub.com/vv2/event/64d1d1bb-68a1-4b25-9940-4ced453a0f23"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}
-                >
-                  Sign up for this shift →
-                </a>
-              </div>
+              <div><strong style={{ color: 'var(--color-text-primary)' }}>🦃 Drive-Through Thanksgiving Meal</strong></div>
+              <div>📅 Thanksgiving Day &nbsp;|&nbsp; 11:00 am – 12:00 pm</div>
+              <div>📌 1011 Main St., El Cajon, CA</div>
+              <div style={{ marginTop: '0.2rem', fontStyle: 'italic' }}>First Come, First Served</div>
             </div>
-
           </div>
-        )}
+
+          {/* Right: SD Food Bank volunteer opportunity */}
+          <div style={{
+            padding: '1.25rem',
+            background: isDark ? 'hsla(210,90%,55%,0.07)' : 'hsla(210,90%,55%,0.05)',
+            border: '1px solid hsla(210,90%,55%,0.28)',
+            borderRadius: 14,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span style={{ fontSize: '1rem' }}>🤝</span>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--color-primary)' }}>Volunteer Opportunity</span>
+            </div>
+            <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.3 }}>
+              SD Food Bank — Senior Food Distribution Volunteers Needed
+            </p>
+            <p style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.6 }}>
+              The Jacobs &amp; Cushman San Diego Food Bank is seeking volunteers to assist with senior food distribution events. Must be 16+ and non-court-ordered.
+            </p>
+            {/* Event details box */}
+            <div style={{
+              fontSize: '0.82rem',
+              color: 'var(--color-text-secondary)',
+              background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+              borderRadius: 8,
+              padding: '0.6rem 0.75rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.2rem',
+            }}>
+              <div><strong style={{ color: 'var(--color-text-primary)' }}>📍 Senior Food Distribution – Meridian Baptist Church</strong></div>
+              <div>📅 November 13, 2026 &nbsp;|&nbsp; 12:00 pm – 3:30 pm</div>
+              <div>📌 660 S. 3rd St, El Cajon, CA 92019</div>
+            </div>
+            <ul style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', margin: '0.1rem 0 0', paddingLeft: '1.1rem', lineHeight: 1.7 }}>
+              <li>Closed-toe shoes required; event held outdoors</li>
+              <li>Must be able to lift up to 40 lbs if needed</li>
+              <li>Non-court-ordered individuals only</li>
+            </ul>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.25rem' }}>
+              <a
+                href="https://sdfb.volunteerhub.com/vv2/"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}
+              >
+                Step 1 – Create / sign in to your volunteer account →
+              </a>
+              <a
+                href="https://sdfb.volunteerhub.com/vv2/event/64d1d1bb-68a1-4b25-9940-4ced453a0f23"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}
+              >
+                Step 2 – Sign up for the event →
+              </a>
+            </div>
+          </div>
+
+        </div>
 
         {/* Folder tabs + Map/Calendar */}
 
